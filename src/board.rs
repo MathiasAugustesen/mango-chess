@@ -1,0 +1,451 @@
+use crate::constants::*;
+use crate::fen;
+use crate::fen::castling_rights_from_fen;
+use crate::fen::en_passant_square_from_fen;
+use std::str::FromStr;
+use PieceColor::*;
+use PieceKind::*;
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PieceColor {
+    White,
+    Black,
+}
+impl PieceColor {
+    pub fn opposite(self) -> PieceColor {
+        match self {
+            White => Black,
+            Black => White,
+        }
+    }
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PieceKind {
+    Pawn,
+    Knight,
+    Bishop,
+    Rook,
+    Queen,
+    King,
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Square {
+    Empty,
+    Full(Piece),
+    Aether,
+}
+impl Square {
+    pub fn is_empty(self) -> bool {
+        self == Square::Empty
+    }
+    pub fn is_color(self, color: PieceColor) -> bool {
+        match self {
+            Square::Full(Piece {
+                color: square_color,
+                ..
+            }) => color == square_color,
+            _ => false,
+        }
+    }
+    pub fn is_enemy_of(self, color: PieceColor) -> bool {
+        !self.is_color(color)
+    }
+    pub fn has_piece(self) -> bool {
+        match self {
+            Square::Full(_) => true,
+            _ => false,
+        }
+    }
+    pub fn is_empty_or_enemy_of(self, color: PieceColor) -> bool {
+        match self {
+            Square::Full(Piece {
+                color: square_color,
+                ..
+            }) => color != square_color,
+            Square::Empty => true,
+            _ => false,
+        }
+    }
+}
+impl From<Piece> for Square {
+    fn from(value: Piece) -> Self {
+        Square::Full(value)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Piece {
+    color: PieceColor,
+    kind: PieceKind,
+}
+impl Piece {
+    pub fn color(self) -> PieceColor {
+        self.color
+    }
+    pub fn kind(self) -> PieceKind {
+        self.kind
+    }
+    const fn pawn(color: PieceColor) -> Piece {
+        Piece { color, kind: Pawn }
+    }
+    const fn knight(color: PieceColor) -> Piece {
+        Piece {
+            color,
+            kind: Knight,
+        }
+    }
+    const fn bishop(color: PieceColor) -> Piece {
+        Piece {
+            color,
+            kind: Bishop,
+        }
+    }
+    const fn rook(color: PieceColor) -> Piece {
+        Piece { color, kind: Rook }
+    }
+    const fn queen(color: PieceColor) -> Piece {
+        Piece { color, kind: Queen }
+    }
+    const fn king(color: PieceColor) -> Piece {
+        Piece { color, kind: King }
+    }
+}
+impl TryFrom<char> for Piece {
+    type Error = &'static str;
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        let piece = match value {
+            'P' => Piece::pawn(White),
+            'N' => Piece::knight(White),
+            'B' => Piece::bishop(White),
+            'R' => Piece::rook(White),
+            'Q' => Piece::queen(White),
+            'K' => Piece::king(White),
+            'p' => Piece::pawn(Black),
+            'n' => Piece::knight(Black),
+            'b' => Piece::bishop(Black),
+            'r' => Piece::rook(Black),
+            'q' => Piece::queen(Black),
+            'k' => Piece::king(Black),
+            _ => return Err("Character is not a valid chess piece"),
+        };
+        Ok(piece)
+    }
+}
+pub enum CastlingType {
+    WhiteKingSide,
+    WhiteQueenSide,
+    BlackKingSide,
+    BlackQueenSide,
+}
+#[derive(Clone, PartialEq, Debug)]
+pub struct CastlingRights {
+    pub white_king_side_castling: bool,
+    pub white_queen_side_castling: bool,
+    pub black_king_side_castling: bool,
+    pub black_queen_side_castling: bool,
+}
+impl CastlingRights {
+    pub fn all_castling_rights() -> CastlingRights {
+        CastlingRights {
+            white_king_side_castling: true,
+            white_queen_side_castling: true,
+            black_king_side_castling: true,
+            black_queen_side_castling: true,
+        }
+    }
+    pub fn remove_castling_right(&mut self, castling_type: CastlingType) {
+        match castling_type {
+            CastlingType::WhiteKingSide => self.white_king_side_castling = false,
+            CastlingType::WhiteQueenSide => self.white_queen_side_castling = false,
+            CastlingType::BlackKingSide => self.black_king_side_castling = false,
+            CastlingType::BlackQueenSide => self.black_queen_side_castling = false,
+        }
+    }
+    pub fn remove_white_castling_rights(&mut self) {
+        self.white_king_side_castling = false;
+        self.white_queen_side_castling = false;
+    }
+    pub fn remove_black_castling_rights(&mut self) {
+        self.black_king_side_castling = false;
+        self.black_queen_side_castling = false;
+    }
+}
+#[derive(Clone, PartialEq, Debug)]
+pub struct BoardState {
+    pub board: [[Square; 12]; 12],
+    pub to_move: PieceColor,
+    // Keeps track of all the white pieces
+    pub white_bitboard: u64,
+    // Keeps track of all the black pieces
+    pub black_bitboard: u64,
+    pub white_king_location: ChessCell,
+    pub black_king_location: ChessCell,
+    pub castling_rights: CastlingRights,
+    pub en_passant_square: Option<ChessCell>,
+    pub last_move: Option<(ChessCell, ChessCell)>,
+    pub pawn_promotion: Option<ChessCell>,
+}
+impl BoardState {
+    pub fn new() -> BoardState {
+        let mut board = empty_board();
+        // Arrange pawns for both sides
+        for file in A_FILE..=H_FILE {
+            board[RANK_2][file] = Piece::pawn(White).into();
+            board[RANK_7][file] = Piece::pawn(Black).into();
+        }
+        // Arrange white pieces
+        board[RANK_1][A_FILE] = Piece::rook(White).into();
+        board[RANK_1][B_FILE] = Piece::knight(White).into();
+        board[RANK_1][C_FILE] = Piece::bishop(White).into();
+        board[RANK_1][D_FILE] = Piece::queen(White).into();
+        board[RANK_1][E_FILE] = Piece::king(White).into();
+        board[RANK_1][F_FILE] = Piece::bishop(White).into();
+        board[RANK_1][G_FILE] = Piece::knight(White).into();
+        board[RANK_1][H_FILE] = Piece::rook(White).into();
+        // Arrange black pieces
+        board[RANK_8][A_FILE] = Piece::rook(Black).into();
+        board[RANK_8][B_FILE] = Piece::knight(Black).into();
+        board[RANK_8][C_FILE] = Piece::bishop(Black).into();
+        board[RANK_8][D_FILE] = Piece::queen(Black).into();
+        board[RANK_8][E_FILE] = Piece::king(Black).into();
+        board[RANK_8][F_FILE] = Piece::bishop(Black).into();
+        board[RANK_8][G_FILE] = Piece::knight(Black).into();
+        board[RANK_8][H_FILE] = Piece::rook(Black).into();
+        let to_move = White;
+        let white_bitboard = WHITE_STARTING_BITBOARD;
+        let black_bitboard = BLACK_STARTING_BITBOARD;
+        let white_king_location = ChessCell(RANK_1, E_FILE);
+        let black_king_location = ChessCell(RANK_8, E_FILE);
+        let castling_rights = CastlingRights::all_castling_rights();
+        let en_passant_square = None;
+        let last_move = None;
+        let pawn_promotion = None;
+        BoardState {
+            board,
+            to_move,
+            white_bitboard,
+            black_bitboard,
+            white_king_location,
+            black_king_location,
+            castling_rights,
+            en_passant_square,
+            last_move,
+            pawn_promotion,
+        }
+    }
+    pub fn from_fen(fen: &str) -> Result<BoardState, &str> {
+        let fen_parts: Vec<&str> = fen.split_ascii_whitespace().collect();
+        if fen_parts.len() != 6 {
+            return Err("Failed to parse FEN string: FEN string did not have length 6");
+        }
+        let fen_board = fen_parts[0];
+        let board = fen::board_from_fen(fen_board)?;
+        let (white_king_location, black_king_location) = find_kings(&board)?;
+        let fen_to_move = fen_parts[1];
+        let to_move = fen::to_move_from_fen(fen_to_move)?;
+        let fen_castling_rights = fen_parts[2];
+        let castling_rights = castling_rights_from_fen(fen_castling_rights)?;
+        let fen_en_passant_square = fen_parts[3];
+        let en_passant_square = en_passant_square_from_fen(fen_en_passant_square)?;
+        let halfmove_clock = fen_parts[4];
+        let fullmove_clock = fen_parts[5];
+        if white_king_location.0 > BOARD_END
+            || white_king_location.1 > BOARD_END
+            || black_king_location.0 > BOARD_END
+            || black_king_location.1 > BOARD_END
+        {
+            return Err("Failed to parse FEN string: Both kings were not on the board");
+        }
+        let (white_bitboard, black_bitboard) = get_bitboards(&board);
+        let board_state = BoardState {
+            board,
+            to_move,
+            white_bitboard,
+            black_bitboard,
+            white_king_location,
+            black_king_location,
+            castling_rights,
+            en_passant_square,
+            last_move: None,
+            pawn_promotion: None,
+        };
+        Ok(board_state)
+    }
+    pub fn swap_to_move(&mut self) {
+        match self.to_move {
+            White => self.to_move = Black,
+            Black => self.to_move = White,
+        }
+    }
+    pub fn clear_en_passant_square(&mut self) {
+        self.en_passant_square = None;
+    }
+    pub fn move_piece(&mut self, position: ChessCell, destination: ChessCell) {
+        if let Square::Full(piece) = self.board[position.0][position.1] {
+            self.board[position.0][position.1] = Square::Empty;
+            self.board[destination.0][destination.1] = Square::Full(piece);
+        }
+    }
+    pub fn get_piece_positions(&self, color: PieceColor) -> Vec<ChessCell> {
+        let mut piece_positions = Vec::new();
+        let mut bitboard = match color {
+            White => self.white_bitboard,
+            Black => self.black_bitboard,
+        };
+        while bitboard != 0 {
+            let position = bitboard.trailing_zeros();
+            let rank = BOARD_START + (position / 8) as usize;
+            let file = BOARD_START + (position % 8) as usize;
+            piece_positions.push(ChessCell(rank, file));
+            bitboard ^= 1 << position;
+        }
+        piece_positions
+    }
+}
+// ChessCell represents a valid algebraic square on the board
+// The format is row, col, or rank, file in chess terms.
+// b4 will therefore translate to ChessCell(3, 1)
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ChessCell(pub usize, pub usize);
+impl FromStr for ChessCell {
+    type Err = &'static str;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.len() != 2 {
+            return Err("Failed to parse ChessCell from string: Length was not 2");
+        }
+        let col = s.chars().next().unwrap();
+        let row = s.chars().nth(1).unwrap();
+
+        let file = match col {
+            'a' => 0,
+            'b' => 1,
+            'c' => 2,
+            'd' => 3,
+            'e' => 4,
+            'f' => 5,
+            'g' => 6,
+            'h' => 7,
+            _ => return Err("Failed to parse ChessCell from string: Invalid file"),
+        };
+        let row = row.to_digit(10);
+        if row.is_none() {
+            return Err("Failed to parse ChessCell from string: rank was not a valid number");
+        }
+        let rank = BOARD_END - row.unwrap() as usize;
+        Ok(ChessCell(rank, file + BOARD_START))
+    }
+}
+pub fn empty_board() -> [[Square; 12]; 12] {
+    [[Square::Empty; 12]; 12]
+}
+// Returns (white_bitboard, black_bitboard)
+pub fn get_bitboards(board: &[[Square; 12]; 12]) -> (u64, u64) {
+    let mut white_bitboard: u64 = 0;
+    let mut black_bitboard: u64 = 0;
+    let mut position: u64 = 0;
+    for rank in BOARD_START..=BOARD_END {
+        for file in BOARD_START..=BOARD_END {
+            if let Square::Full(piece) = board[rank][file] {
+                match piece.color {
+                    White => white_bitboard |= 1 << position,
+                    Black => black_bitboard |= 1 << position,
+                }
+            }
+            position += 1;
+        }
+    }
+    (white_bitboard, black_bitboard)
+}
+// Returns (white_king_location, black_king_location)
+fn find_kings(board: &[[Square; 12]; 12]) -> Result<(ChessCell, ChessCell), &'static str> {
+    let mut white_king_location: Option<ChessCell> = None;
+    let mut black_king_location: Option<ChessCell> = None;
+    for rank in RANK_1..=RANK_8 {
+        for file in A_FILE..=H_FILE {
+            let square = board[rank][file];
+            if let Square::Full(piece) = square {
+                if piece.kind() == King {
+                    match piece.color() {
+                        White => white_king_location = Some(ChessCell(rank, file)),
+                        Black => black_king_location = Some(ChessCell(rank, file)),
+                    }
+                }
+            }
+        }
+    }
+    if white_king_location.is_none() || black_king_location.is_none() {
+        return Err("Failed to parse FEN string: Could not find both kings");
+    }
+    Ok((white_king_location.unwrap(), black_king_location.unwrap()))
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn parse_chess_cell_from_valid_str_succeeds() {
+        let parsed_cell: ChessCell = ChessCell::from_str("b4").unwrap();
+        let cell = ChessCell(3 + BOARD_START, 1 + BOARD_START);
+        assert_eq!(parsed_cell, cell);
+    }
+    #[test]
+    fn create_board_from_valid_fen_succeeds() {
+        let fen_board_state: BoardState =
+            BoardState::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+                .unwrap();
+        let new_board_state: BoardState = BoardState::new();
+        assert_eq!(fen_board_state.board, new_board_state.board);
+        assert_eq!(fen_board_state.to_move, new_board_state.to_move);
+        assert_eq!(
+            fen_board_state.white_bitboard,
+            new_board_state.white_bitboard
+        );
+        assert_eq!(
+            fen_board_state.black_bitboard,
+            new_board_state.black_bitboard
+        );
+        assert_eq!(
+            fen_board_state.white_king_location,
+            new_board_state.white_king_location
+        );
+        assert_eq!(
+            fen_board_state.black_king_location,
+            new_board_state.black_king_location
+        );
+        assert_eq!(
+            fen_board_state.castling_rights,
+            new_board_state.castling_rights
+        );
+        assert_eq!(
+            fen_board_state.en_passant_square,
+            new_board_state.en_passant_square
+        );
+        assert_eq!(fen_board_state.last_move, new_board_state.last_move);
+        assert_eq!(
+            fen_board_state.pawn_promotion,
+            new_board_state.pawn_promotion
+        );
+    }
+    #[test]
+    #[should_panic]
+    fn create_board_from_fen_with_invalid_length_panics() {
+        let board_state: BoardState =
+            BoardState::from_fen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR KQkq e3 0 1")
+                .unwrap();
+    }
+    #[test]
+    fn get_bitboards_returns_the_right_bitboards() {
+        let board_state = BoardState::new();
+        let (white_bitboard, black_bitboard) = get_bitboards(&board_state.board);
+        assert_eq!(white_bitboard, 0xFFFF);
+        assert_eq!(black_bitboard, 0xFFFF << 48);
+    }
+    #[test]
+    fn is_empty_or_enemy_of_works() {
+        let board_state = BoardState::new();
+        let board = board_state.board;
+        let white_king_square = board[RANK_1][E_FILE];
+        assert_eq!(white_king_square.is_empty_or_enemy_of(Black), true);
+        assert_eq!(white_king_square.is_empty_or_enemy_of(White), false);
+        let c6 = board[RANK_6][C_FILE];
+        assert_eq!(c6.is_empty_or_enemy_of(White), true);
+    }
+}
