@@ -34,6 +34,9 @@ pub enum Square {
     Aether,
 }
 impl Square {
+    pub fn is_inside_board(self) -> bool {
+        self != Square::Aether
+    }
     pub fn is_empty(self) -> bool {
         self == Square::Empty
     }
@@ -306,6 +309,11 @@ impl BoardState {
 // b4 will therefore translate to ChessCell(3, 1)
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ChessCell(pub usize, pub usize);
+impl From<(usize, usize)> for ChessCell {
+    fn from(value: (usize, usize)) -> Self {
+        ChessCell(value.0, value.1)
+    }
+}
 impl FromStr for ChessCell {
     type Err = &'static str;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
