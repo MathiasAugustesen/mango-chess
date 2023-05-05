@@ -1,4 +1,3 @@
-use crate::board;
 use crate::board::BoardState;
 use crate::board::ChessCell;
 use crate::board::Piece;
@@ -26,12 +25,13 @@ pub fn generate_moves(board_state: &BoardState) -> Vec<BoardState> {
     let piece_positions = board_state.get_piece_positions(player_to_move);
     for position in piece_positions {
         if let Square::Full(piece) = board[position.0][position.1] {
-            generate_moves_for_piece(piece, board_state, position, &mut new_moves);
+            generate_pseudo_moves_for_piece(piece, board_state, position, &mut new_moves);
         }
     }
+
     Vec::new()
 }
-pub fn generate_moves_for_piece(
+pub fn generate_pseudo_moves_for_piece(
     piece: Piece,
     board_state: &BoardState,
     position: ChessCell,
@@ -50,6 +50,11 @@ pub fn generate_moves_for_piece(
         King => king_moves(color, board_state, position, &mut moves),
         Queen => queen_moves(color, board_state, position, &mut moves),
     }
+    for mov in moves {
+        let mut new_board_state = board_state.clone();
+        new_board_state.move_piece(position, mov);
+        todo!()
+    }
 }
 fn white_pawn_moves(board_state: &BoardState, position: ChessCell, moves: &mut Vec<ChessCell>) {
     let board = board_state.board;
@@ -66,7 +71,7 @@ fn white_pawn_moves(board_state: &BoardState, position: ChessCell, moves: &mut V
     if one_forward.is_empty() {
         moves.push(ChessCell(rank + 1, file));
         let two_forward = board[rank + 2][file];
-        if rank == RANK_7 && board[rank + 2][file].is_empty() {
+        if rank == RANK_7 && two_forward.is_empty() {
             moves.push(ChessCell(rank + 2, file));
         }
     }
@@ -87,7 +92,7 @@ fn black_pawn_moves(board_state: &BoardState, position: ChessCell, moves: &mut V
     if one_forward.is_empty() {
         moves.push(ChessCell(rank - 1, file));
         let two_forward = board[rank - 2][file];
-        if rank == RANK_7 && board[rank - 2][file].is_empty() {
+        if rank == RANK_7 && two_forward.is_empty() {
             moves.push(ChessCell(rank - 2, file));
         }
     }
@@ -133,13 +138,13 @@ fn bishop_moves(
                 Square::Aether => break,
                 Square::Empty => {
                     moves.push(ChessCell(dest_rank, dest_file));
-                    distance += 1
+                    distance += 1;
                 }
                 Square::Full(_) => {
                     if dest_square.is_enemy_of(color) {
                         moves.push(ChessCell(dest_rank, dest_file));
-                        break;
                     }
+                    break;
                 }
             }
         }
@@ -167,8 +172,8 @@ fn rook_moves(
                 Square::Full(_) => {
                     if dest_square.is_enemy_of(color) {
                         moves.push(ChessCell(dest_rank, dest_file));
-                        break;
                     }
+                    break;
                 }
             }
         }
@@ -197,5 +202,26 @@ fn king_moves(
         if dest_square.is_empty_or_enemy_of(color) {
             moves.push(ChessCell(dest_rank, dest_file));
         }
+    }
+}
+#[cfg(test)]
+mod tests {
+    use crate::board::BoardState;
+
+    use super::generate_moves;
+
+    #[test]
+    fn generate_moves_from_starting_position() {
+        let board_state = BoardState::new();
+        let legal_moves = generate_moves(&board_state);
+        assert_eq!(legal_moves.len(), 20);
+    }
+    #[test]
+    fn generate_moves_from_bongcloud() {
+        let board_state =
+            BoardState::from_fen("rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPPKPPP/RNBQ1BNR b kq - 1 2")
+                .unwrap();
+        let legal_moves = generate_moves(&board_state);
+        assert_eq!(legal_moves.len(), 29);
     }
 }

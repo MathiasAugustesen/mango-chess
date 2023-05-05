@@ -249,8 +249,8 @@ impl BoardState {
         let castling_rights = castling_rights_from_fen(fen_castling_rights)?;
         let fen_en_passant_square = fen_parts[3];
         let en_passant_square = en_passant_square_from_fen(fen_en_passant_square)?;
-        let halfmove_clock = fen_parts[4];
-        let fullmove_clock = fen_parts[5];
+        let _halfmove_clock = fen_parts[4];
+        let _fullmove_clock = fen_parts[5];
         if white_king_location.0 > BOARD_END
             || white_king_location.1 > BOARD_END
             || black_king_location.0 > BOARD_END
@@ -453,7 +453,73 @@ mod tests {
         assert_eq!(black_bitboard, 0xFFFF << 48);
     }
     #[test]
-    fn get_piece_positions_for_bongcloud() {}
+    fn get_piece_positions_for_starting_position() {
+        let board_state = BoardState::new();
+        let (white_bitboard, black_bitboard) = get_bitboards(&board_state.board);
+        let white_positions = board_state.get_piece_positions(White);
+        let black_positions = board_state.get_piece_positions(Black);
+        for rank in RANK_1..=RANK_2 {
+            for file in A_FILE..=H_FILE {
+                assert!(white_positions.contains(&ChessCell(rank, file)));
+            }
+        }
+        for rank in RANK_7..=RANK_8 {
+            for file in A_FILE..=H_FILE {
+                assert!(black_positions.contains(&ChessCell(rank, file)));
+            }
+        }
+    }
+    #[test]
+    fn get_piece_positions_for_bongcloud_position() {
+        let board_state =
+            BoardState::from_fen("rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPPKPPP/RNBQ1BNR b kq - 1 2")
+                .unwrap();
+        let (white_bitboard, black_bitboard) = get_bitboards(&board_state.board);
+        let white_positions = board_state.get_piece_positions(White);
+        let white_bongcloud_positions = [
+            ChessCell(RANK_1, A_FILE),
+            ChessCell(RANK_1, B_FILE),
+            ChessCell(RANK_1, C_FILE),
+            ChessCell(RANK_1, D_FILE),
+            ChessCell(RANK_1, F_FILE),
+            ChessCell(RANK_1, G_FILE),
+            ChessCell(RANK_1, H_FILE),
+            ChessCell(RANK_2, A_FILE),
+            ChessCell(RANK_2, B_FILE),
+            ChessCell(RANK_2, C_FILE),
+            ChessCell(RANK_2, D_FILE),
+            ChessCell(RANK_2, E_FILE),
+            ChessCell(RANK_2, F_FILE),
+            ChessCell(RANK_2, G_FILE),
+            ChessCell(RANK_2, H_FILE),
+            ChessCell(RANK_4, E_FILE),
+        ];
+        for position in white_positions {
+            assert!(white_bongcloud_positions.contains(&position))
+        }
+        let black_positions = board_state.get_piece_positions(Black);
+        let black_bongcloud_positions = [
+            ChessCell(RANK_8, A_FILE),
+            ChessCell(RANK_8, B_FILE),
+            ChessCell(RANK_8, C_FILE),
+            ChessCell(RANK_8, D_FILE),
+            ChessCell(RANK_8, E_FILE),
+            ChessCell(RANK_8, F_FILE),
+            ChessCell(RANK_8, G_FILE),
+            ChessCell(RANK_8, H_FILE),
+            ChessCell(RANK_7, A_FILE),
+            ChessCell(RANK_7, B_FILE),
+            ChessCell(RANK_7, C_FILE),
+            ChessCell(RANK_7, D_FILE),
+            ChessCell(RANK_7, F_FILE),
+            ChessCell(RANK_7, G_FILE),
+            ChessCell(RANK_7, H_FILE),
+            ChessCell(RANK_5, E_FILE),
+        ];
+        for position in black_positions {
+            assert!(black_bongcloud_positions.contains(&position))
+        }
+    }
     #[test]
     fn is_empty_or_enemy_of_works() {
         let board_state = BoardState::new();
