@@ -343,7 +343,13 @@ impl FromStr for ChessCell {
     }
 }
 pub fn empty_board() -> [[Square; 12]; 12] {
-    [[Square::Empty; 12]; 12]
+    let mut board = [[Square::Aether; 12]; 12];
+    for rank in RANK_1..=RANK_8 {
+        for file in A_FILE..=H_FILE {
+            board[rank][file] = Square::Empty;
+        }
+    }
+    board
 }
 // Returns (white_bitboard, black_bitboard)
 pub fn get_bitboards(board: &[[Square; 12]; 12]) -> (u64, u64) {
@@ -446,6 +452,8 @@ mod tests {
         assert_eq!(white_bitboard, 0xFFFF);
         assert_eq!(black_bitboard, 0xFFFF << 48);
     }
+    #[test]
+    fn get_piece_positions_for_bongcloud() {}
     #[test]
     fn is_empty_or_enemy_of_works() {
         let board_state = BoardState::new();
