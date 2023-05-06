@@ -2,6 +2,8 @@ use crate::constants::*;
 use crate::fen;
 use crate::fen::castling_rights_from_fen;
 use crate::fen::en_passant_square_from_fen;
+use crate::move_generation::generate_pseudo_moves_for_piece;
+use crate::ray_attacks::*;
 use std::str::FromStr;
 use PieceColor::*;
 use PieceKind::*;
@@ -53,7 +55,13 @@ impl Square {
         }
     }
     pub fn is_enemy_of(self, color: PieceColor) -> bool {
-        !self.is_color(color)
+        match self {
+            Square::Full(Piece {
+                color: square_color,
+                ..
+            }) => color != square_color,
+            _ => false,
+        }
     }
     pub fn has_piece(self) -> bool {
         match self {
@@ -358,38 +366,65 @@ impl BoardState {
         };
         while bitboard != 0 {
             let position = bitboard.trailing_zeros();
-            let rank = BOARD_START + (position / 8) as usize;
-            let file = BOARD_START + (position % 8) as usize;
-            piece_positions.push(ChessCell(rank, file));
+            let cell = ChessCell::from_index(position as usize);
+            piece_positions.push(cell);
             bitboard ^= 1 << position;
         }
         piece_positions
     }
     // Given an arbitrary position, determine if the position is legal given that the last move was played by self.to_move.
     // This method does not make any assumptions about how the move was made
+    //
+    // First, a list of all enemy pieces that x-ray the king is generated with a lookup table. If this list is empty, the king is safe.
+    // afterwards,
     pub fn is_valid_move(&self) -> bool {
-        if !self.is_in_ray_check() {
+        let king_location = match self.to_move {
+            White => self.white_king_location,
+            Black => self.black_king_location,
+        };
+        let ray_attackers = self.ray_attackers(king_location.as_index());
+        if ray_attackers.len() == 0 {
             return true;
+        }
+        let mut enemy_moves: Vec<(ChessCell, ChessCell)> = Vec::new();
+        for (piece, position) in ray_attackers {
+            generate_pseudo_moves_for_piece(piece, self, position, &mut enemy_moves);
+            let king_is_attacked = enemy_moves
+                .iter()
+                .map(|mov| mov.1)
+                .any(|attacked_square| attacked_square == king_location);
+            if king_is_attacked {
+                return false;
+            }
         }
         true
     }
-    // This function will search a lookup table and check if the king is in an x-ray check.
-    // In situations where the king is not in x-ray check, this will lead to a significant speedup.
-    pub fn is_in_ray_check(&self) -> bool {
-        let mut ray_attackers: Vec<(PieceKind, ChessCell)> = Vec::new();
-        for piece_position in self.get_piece_positions(self.to_move.opposite()) {
-            let piece = self.board[piece_position.0][piece_position.1].piece();
-            /*let attacked_squares = match piece.kind() {
-                Pawn => PAWN_ATTACKED_SQUARES[piece_position.as_index()]
+    // This function will search a lookup table and check if the piece is in an x-ray attack.
+    // Primarily used for seeing if the king is in check, but works for any square on the board.
+    pub fn ray_attackers(&self, piece_location_index: usize) -> Vec<(Piece, ChessCell)> {
+        let mut ray_attackers: Vec<(Piece, ChessCell)> = Vec::new();
+        let enemy_color = self.to_move.opposite();
+        for piece_position in self.get_piece_positions(enemy_color) {
+            let attacking_piece = self.board[piece_position.0][piece_position.1].piece();
+            let attacked_squares = match (attacking_piece.color(), attacking_piece.kind()) {
+                (White, Pawn) => WHITE_PAWN_RAY_ATTACKS[piece_position.as_index()],
+                (Black, Pawn) => BLACK_PAWN_RAY_ATTACKS[piece_position.as_index()],
+                (_, Knight) => KNIGHT_RAY_ATTACKS[piece_position.as_index()],
+                (_, Bishop) => BISHOP_RAY_ATTACKS[piece_position.as_index()],
+                (_, Rook) => ROOK_RAY_ATTACKS[piece_position.as_index()],
+                (_, Queen) => QUEEN_RAY_ATTACKS[piece_position.as_index()],
+                (_, King) => KING_RAY_ATTACKS[piece_position.as_index()],
+            };
+            if attacked_squares.contains(&piece_location_index) {
+                ray_attackers.push((attacking_piece, piece_position));
             }
-            */
         }
-        true
+        ray_attackers
     }
 }
 // ChessCell represents a valid algebraic square on the board
 // The format is row, col, or rank, file in chess terms.
-// b4 will therefore translate to ChessCell(3, 1)
+// b4 will therefore translate to ChessCell(3, 5)
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ChessCell(pub usize, pub usize);
 impl From<(usize, usize)> for ChessCell {
@@ -397,11 +432,17 @@ impl From<(usize, usize)> for ChessCell {
         ChessCell(value.0, value.1)
     }
 }
+
 impl ChessCell {
     pub fn as_index(self) -> usize {
         let rank_index = self.0 - BOARD_START;
         let file_index = self.1 - BOARD_START;
         rank_index * 8 + file_index
+    }
+    pub fn from_index(index: usize) -> ChessCell {
+        let rank = index / 8 + BOARD_START;
+        let file = index % 8 + BOARD_START;
+        ChessCell(rank, file)
     }
 }
 impl FromStr for ChessCell {

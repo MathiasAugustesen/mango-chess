@@ -6,6 +6,8 @@ use crate::board::PieceColor::*;
 use crate::board::PieceKind::*;
 use crate::board::Square;
 use crate::constants::*;
+use crate::ray_attacks::KING_RAY_ATTACKS;
+use crate::ray_attacks::KNIGHT_RAY_ATTACKS;
 const BISHOP_DIRECTIONS: [(i32, i32); 4] = [(-1, -1), (-1, 1), (1, -1), (1, 1)];
 const ROOK_DIRECTIONS: [(i32, i32); 4] = [(-1, 0), (0, -1), (0, 1), (1, 0)];
 const KING_DIRECTIONS: [(i32, i32); 8] = [
@@ -24,6 +26,7 @@ pub fn generate_moves(board_state: &BoardState) -> Vec<BoardState> {
     let mut potential_moves: Vec<(ChessCell, ChessCell)> = Vec::with_capacity(16);
     let player_to_move = board_state.to_move;
     let piece_positions = board_state.get_piece_positions(player_to_move);
+
     for position in piece_positions {
         if let Square::Full(piece) = board[position.0][position.1] {
             generate_pseudo_moves_for_piece(piece, board_state, position, &mut potential_moves);
@@ -37,7 +40,7 @@ pub fn generate_moves(board_state: &BoardState) -> Vec<BoardState> {
             new_moves.push(new_board);
         }
     }
-    Vec::new()
+    new_moves
 }
 pub fn generate_pseudo_moves_for_piece(
     piece: Piece,
@@ -77,7 +80,7 @@ fn white_pawn_moves(
     if one_forward.is_empty() {
         moves.push((position, ChessCell(rank + 1, file)));
         let two_forward = board[rank + 2][file];
-        if rank == RANK_7 && two_forward.is_empty() {
+        if rank == RANK_2 && two_forward.is_empty() {
             moves.push((position, ChessCell(rank + 2, file)));
         }
     }
@@ -114,20 +117,12 @@ pub fn knight_moves(
     moves: &mut Vec<(ChessCell, ChessCell)>,
 ) {
     let board = board_state.board;
-    let ChessCell(rank, file) = position;
-    let jumps = [
-        (rank - 2, file - 1),
-        (rank - 2, file + 1),
-        (rank - 1, file - 2),
-        (rank - 1, file + 2),
-        (rank + 1, file - 2),
-        (rank + 1, file + 2),
-        (rank + 2, file - 1),
-        (rank + 2, file + 1),
-    ];
-    for jump in jumps {
-        if board[jump.0][jump.1].is_empty_or_enemy_of(color) {
-            moves.push((position, jump.into()))
+    let destinations = KNIGHT_RAY_ATTACKS[position.as_index()];
+    for destination in destinations {
+        let attacked_cell = ChessCell::from_index(*destination);
+        let attacked_square = board[attacked_cell.0][attacked_cell.1];
+        if attacked_square.is_empty_or_enemy_of(color) {
+            moves.push((position, attacked_cell));
         }
     }
 }
@@ -205,12 +200,11 @@ pub fn king_moves(
     moves: &mut Vec<(ChessCell, ChessCell)>,
 ) {
     let board = board_state.board;
-    for king_move in KING_DIRECTIONS {
-        let dest_rank = (position.0 as i32 + king_move.0) as usize;
-        let dest_file = (position.1 as i32 + king_move.1) as usize;
-        let dest_square = board[dest_rank][dest_file];
-        if dest_square.is_empty_or_enemy_of(color) {
-            moves.push((position, ChessCell(dest_rank, dest_file)));
+    let destinations = KING_RAY_ATTACKS[position.as_index()];
+    for destination in destinations {
+        let cell = ChessCell::from_index(*destination);
+        if board[cell.0][cell.1].is_empty_or_enemy_of(color) {
+            moves.push((position, cell));
         }
     }
 }
