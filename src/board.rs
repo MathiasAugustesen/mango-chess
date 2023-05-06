@@ -29,6 +29,18 @@ pub enum PieceKind {
     Queen,
     King,
 }
+impl PieceKind {
+    pub const fn index(self) -> usize {
+        match self {
+            Pawn => 0,
+            Knight => 1,
+            Bishop => 2,
+            Rook => 3,
+            Queen => 4,
+            King => 5,
+        }
+    }
+}
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Square {
     Empty,
@@ -130,6 +142,9 @@ impl Piece {
     }
     const fn king(color: PieceColor) -> Piece {
         Piece { color, kind: King }
+    }
+    pub const fn index(self) -> usize {
+        self.kind.index()
     }
 }
 impl TryFrom<char> for Piece {
