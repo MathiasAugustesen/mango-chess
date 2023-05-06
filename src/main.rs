@@ -5,12 +5,10 @@ pub mod fen;
 pub mod move_generation;
 use crate::constants::*;
 use board::PieceColor;
-
+mod ray_attacks;
+use crate::board::PieceKind::*;
+use ray_attacks::*;
 fn main() {
-    let board_state =
-        BoardState::from_fen("rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPPKPPP/RNBQ1BNR b kq - 1 2");
-    println!(
-        "{:?}",
-        &board_state.unwrap().get_piece_positions(PieceColor::White)
-    );
+    let ray_attacks = generate_big_piece_ray_attacks(Queen);
+    println!("{:?}", ray_attacks);
 }

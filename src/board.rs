@@ -34,6 +34,9 @@ pub enum Square {
     Aether,
 }
 impl Square {
+    pub fn is_aether(self) -> bool {
+        self == Square::Aether
+    }
     pub fn is_inside_board(self) -> bool {
         self != Square::Aether
     }
@@ -66,6 +69,15 @@ impl Square {
             }) => color != square_color,
             Square::Empty => true,
             _ => false,
+        }
+    }
+    pub fn piece(self) -> Piece {
+        match self {
+            Square::Full(piece) => piece,
+            Square::Empty => panic!("Expected piece to be present at square but square was Empty"),
+            Square::Aether => {
+                panic!("Expected piece to be present at square but square was Aether")
+            }
         }
     }
 }
@@ -147,6 +159,14 @@ pub struct CastlingRights {
     pub black_queen_side_castling: bool,
 }
 impl CastlingRights {
+    pub fn no_castling_rights() -> CastlingRights {
+        CastlingRights {
+            white_king_side_castling: false,
+            white_queen_side_castling: false,
+            black_king_side_castling: false,
+            black_queen_side_castling: false,
+        }
+    }
     pub fn all_castling_rights() -> CastlingRights {
         CastlingRights {
             white_king_side_castling: true,
@@ -188,7 +208,31 @@ pub struct BoardState {
     pub pawn_promotion: Option<ChessCell>,
 }
 impl BoardState {
-    pub fn new() -> BoardState {
+    pub fn empty_game() -> BoardState {
+        let board = empty_board();
+        let to_move = White;
+        let white_bitboard: u64 = 0;
+        let black_bitboard: u64 = 0;
+        let white_king_location = ChessCell(100, 100);
+        let black_king_location = ChessCell(100, 100);
+        let castling_rights = CastlingRights::no_castling_rights();
+        let en_passant_square = None;
+        let last_move = None;
+        let pawn_promotion = None;
+        return BoardState {
+            board,
+            to_move,
+            white_bitboard,
+            black_bitboard,
+            white_king_location,
+            black_king_location,
+            castling_rights,
+            en_passant_square,
+            last_move,
+            pawn_promotion,
+        };
+    }
+    pub fn new_game() -> BoardState {
         let mut board = empty_board();
         // Arrange pawns for both sides
         for file in A_FILE..=H_FILE {
@@ -286,6 +330,24 @@ impl BoardState {
         if let Square::Full(piece) = self.board[position.0][position.1] {
             self.board[position.0][position.1] = Square::Empty;
             self.board[destination.0][destination.1] = Square::Full(piece);
+            match piece.color() {
+                White => {
+                    if piece.kind() == King {
+                        self.white_king_location = destination;
+                    }
+                    // Flips the previous position, removing it.
+                    self.white_bitboard ^= 1 << position.as_index();
+                    // Logical OR adds the new position to the bitboard
+                    self.white_bitboard |= 1 << destination.as_index();
+                }
+                Black => {
+                    if piece.kind() == King {
+                        self.black_king_location = destination;
+                    }
+                    self.black_bitboard ^= 1 << position.as_index();
+                    self.black_bitboard |= 1 << destination.as_index();
+                }
+            }
         }
     }
     pub fn get_piece_positions(&self, color: PieceColor) -> Vec<ChessCell> {
@@ -303,6 +365,27 @@ impl BoardState {
         }
         piece_positions
     }
+    // Given an arbitrary position, determine if the position is legal given that the last move was played by self.to_move.
+    // This method does not make any assumptions about how the move was made
+    pub fn is_valid_move(&self) -> bool {
+        if !self.is_in_ray_check() {
+            return true;
+        }
+        true
+    }
+    // This function will search a lookup table and check if the king is in an x-ray check.
+    // In situations where the king is not in x-ray check, this will lead to a significant speedup.
+    pub fn is_in_ray_check(&self) -> bool {
+        let mut ray_attackers: Vec<(PieceKind, ChessCell)> = Vec::new();
+        for piece_position in self.get_piece_positions(self.to_move.opposite()) {
+            let piece = self.board[piece_position.0][piece_position.1].piece();
+            /*let attacked_squares = match piece.kind() {
+                Pawn => PAWN_ATTACKED_SQUARES[piece_position.as_index()]
+            }
+            */
+        }
+        true
+    }
 }
 // ChessCell represents a valid algebraic square on the board
 // The format is row, col, or rank, file in chess terms.
@@ -312,6 +395,13 @@ pub struct ChessCell(pub usize, pub usize);
 impl From<(usize, usize)> for ChessCell {
     fn from(value: (usize, usize)) -> Self {
         ChessCell(value.0, value.1)
+    }
+}
+impl ChessCell {
+    pub fn as_index(self) -> usize {
+        let rank_index = self.0 - BOARD_START;
+        let file_index = self.1 - BOARD_START;
+        rank_index * 8 + file_index
     }
 }
 impl FromStr for ChessCell {
@@ -405,7 +495,7 @@ mod tests {
         let fen_board_state: BoardState =
             BoardState::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
                 .unwrap();
-        let new_board_state: BoardState = BoardState::new();
+        let new_board_state: BoardState = BoardState::new_game();
         assert_eq!(fen_board_state.board, new_board_state.board);
         assert_eq!(fen_board_state.to_move, new_board_state.to_move);
         assert_eq!(
@@ -447,14 +537,14 @@ mod tests {
     }
     #[test]
     fn get_bitboards_returns_the_right_bitboards() {
-        let board_state = BoardState::new();
+        let board_state = BoardState::new_game();
         let (white_bitboard, black_bitboard) = get_bitboards(&board_state.board);
         assert_eq!(white_bitboard, 0xFFFF);
         assert_eq!(black_bitboard, 0xFFFF << 48);
     }
     #[test]
     fn get_piece_positions_for_starting_position() {
-        let board_state = BoardState::new();
+        let board_state = BoardState::new_game();
         let (white_bitboard, black_bitboard) = get_bitboards(&board_state.board);
         let white_positions = board_state.get_piece_positions(White);
         let black_positions = board_state.get_piece_positions(Black);
@@ -522,7 +612,7 @@ mod tests {
     }
     #[test]
     fn is_empty_or_enemy_of_works() {
-        let board_state = BoardState::new();
+        let board_state = BoardState::new_game();
         let board = board_state.board;
         let white_king_square = board[RANK_1][E_FILE];
         assert_eq!(white_king_square.is_empty_or_enemy_of(Black), true);
