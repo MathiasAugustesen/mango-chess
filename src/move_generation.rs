@@ -36,7 +36,7 @@ pub fn generate_moves(board_state: &BoardState) -> Vec<BoardState> {
         let mut new_board = board_state.clone();
         new_board.move_piece(position, destination);
         if new_board.is_valid_move() {
-            //new_board.update_board_state();
+            new_board.update_board_state(position, destination);
             new_moves.push(new_board);
         }
     }

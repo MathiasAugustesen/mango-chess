@@ -2,7 +2,7 @@ use crate::board::BoardState;
 use crate::board::PieceColor::*;
 const piece_values: [i32; 6] = [100, 300, 325, 500, 900, 10000];
 //const PAWN_POSITION_VALUE: [u64; 64] =
-fn evaluate(board_state: &BoardState) -> i32 {
+pub fn evaluate(board_state: &BoardState) -> i32 {
     let board = board_state.board;
     let mut evaluation: i32 = 0;
     for white_piece in board_state.get_piece_positions(White) {

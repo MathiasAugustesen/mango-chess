@@ -94,7 +94,9 @@ impl Square {
     pub fn piece(self) -> Piece {
         match self {
             Square::Full(piece) => piece,
-            Square::Empty => panic!("Expected piece to be present at square but square was Empty"),
+            Square::Empty => {
+                panic!("Expected piece to be present at square but square was Empty")
+            }
             Square::Aether => {
                 panic!("Expected piece to be present at square but square was Aether")
             }
@@ -362,6 +364,8 @@ impl BoardState {
                     self.white_bitboard ^= 1 << position.as_index();
                     // Logical OR adds the new position to the bitboard
                     self.white_bitboard |= 1 << destination.as_index();
+                    let mask = !(1 << destination.as_index());
+                    self.black_bitboard &= mask;
                 }
                 Black => {
                     if piece.kind() == King {
@@ -369,8 +373,12 @@ impl BoardState {
                     }
                     self.black_bitboard ^= 1 << position.as_index();
                     self.black_bitboard |= 1 << destination.as_index();
+                    let mask = !(1 << destination.as_index());
+                    self.white_bitboard &= mask;
                 }
             }
+        } else {
+            panic!("Tried to move piece but there was not one at the given position.");
         }
     }
     pub fn get_piece_positions(&self, color: PieceColor) -> Vec<ChessCell> {
@@ -420,7 +428,8 @@ impl BoardState {
         let mut ray_attackers: Vec<(Piece, ChessCell)> = Vec::new();
         let enemy_color = self.to_move.opposite();
         for piece_position in self.get_piece_positions(enemy_color) {
-            let attacking_piece = self.board[piece_position.0][piece_position.1].piece();
+            let attacking_square = self.board[piece_position.0][piece_position.1];
+            let attacking_piece = attacking_square.piece();
             let attacked_squares = match (attacking_piece.color(), attacking_piece.kind()) {
                 (White, Pawn) => WHITE_PAWN_RAY_ATTACKS[piece_position.as_index()],
                 (Black, Pawn) => BLACK_PAWN_RAY_ATTACKS[piece_position.as_index()],
@@ -435,6 +444,13 @@ impl BoardState {
             }
         }
         ray_attackers
+    }
+    // update_board_state is responsible for changing the state related to things that are not necessary
+    // for checking validity of a move. This includes unsetting en passant squares, the player to move
+    // and the last move. Responsibility for moving the
+    pub fn update_board_state(&mut self, position: ChessCell, destination: ChessCell) {
+        self.swap_to_move();
+        self.clear_en_passant_square();
     }
 }
 // ChessCell represents a valid algebraic square on the board
