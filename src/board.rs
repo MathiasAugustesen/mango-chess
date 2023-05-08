@@ -504,6 +504,23 @@ impl FromStr for ChessCell {
         Ok(ChessCell(rank, file + BOARD_START))
     }
 }
+impl std::fmt::Display for ChessCell {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let rank = self.0 - 1;
+        let file = match self.1 - 1 {
+            1 => 'a',
+            2 => 'b',
+            3 => 'c',
+            4 => 'd',
+            5 => 'e',
+            6 => 'f',
+            7 => 'g',
+            8 => 'h',
+            _ => panic!("Tried to print square that was outside the board"),
+        };
+        write!(f, "{}{}", file, rank)
+    }
+}
 pub fn empty_board() -> [[Square; 12]; 12] {
     let mut board = [[Square::Aether; 12]; 12];
     for rank in RANK_1..=RANK_8 {

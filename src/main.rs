@@ -3,15 +3,16 @@ pub mod board;
 pub mod constants;
 pub mod fen;
 pub mod move_generation;
-use crate::constants::*;
-use crate::move_generation::generate_moves;
-use board::PieceColor;
-mod ray_attacks;
-use crate::board::PieceKind::*;
-use ray_attacks::*;
-use std::backtrace::Backtrace;
+use board::ChessCell;
 pub mod engine;
 pub mod evaluation;
+mod ray_attacks;
+struct ChessMove(ChessCell, ChessCell);
+impl std::fmt::Display for ChessMove {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}->{}", self.0, self.1)
+    }
+}
 fn main() {
     let board_state = BoardState::new_game();
     let best_score = engine::maxi(&board_state, 5);

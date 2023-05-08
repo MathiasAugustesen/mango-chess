@@ -10,16 +10,6 @@ use crate::ray_attacks::KING_RAY_ATTACKS;
 use crate::ray_attacks::KNIGHT_RAY_ATTACKS;
 const BISHOP_DIRECTIONS: [(i32, i32); 4] = [(-1, -1), (-1, 1), (1, -1), (1, 1)];
 const ROOK_DIRECTIONS: [(i32, i32); 4] = [(-1, 0), (0, -1), (0, 1), (1, 0)];
-const KING_DIRECTIONS: [(i32, i32); 8] = [
-    (-1, -1),
-    (-1, 0),
-    (-1, 1),
-    (0, -1),
-    (0, 1),
-    (1, -1),
-    (1, 0),
-    (1, 1),
-];
 pub fn generate_moves(board_state: &BoardState) -> Vec<BoardState> {
     let board = board_state.board;
     let mut new_moves: Vec<BoardState> = Vec::with_capacity(16);

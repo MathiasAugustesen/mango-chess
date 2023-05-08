@@ -1,11 +1,10 @@
 use crate::board::empty_board;
 use crate::board::BoardState;
 use crate::board::PieceColor::*;
-use crate::board::Square;
 use crate::board::{PieceKind, PieceKind::*};
 use crate::move_generation::*;
 use crate::{board::ChessCell, constants::*};
-pub fn generate_big_piece_ray_attacks(kind: PieceKind) -> Vec<Vec<usize>> {
+pub fn _generate_big_piece_ray_attacks(kind: PieceKind) -> Vec<Vec<usize>> {
     let board_state = BoardState::empty_game();
     let mut ray_attack_lookup: Vec<Vec<usize>> = Vec::new();
     let color = White;
@@ -30,7 +29,7 @@ pub fn generate_big_piece_ray_attacks(kind: PieceKind) -> Vec<Vec<usize>> {
     }
     ray_attack_lookup
 }
-pub fn generate_white_pawn_ray_attacks() -> Vec<Vec<usize>> {
+pub fn _generate_white_pawn_ray_attacks() -> Vec<Vec<usize>> {
     let board = empty_board();
     let mut ray_attack_lookup: Vec<Vec<usize>> = Vec::new();
     for rank in RANK_1..=RANK_8 {
@@ -48,7 +47,7 @@ pub fn generate_white_pawn_ray_attacks() -> Vec<Vec<usize>> {
     }
     ray_attack_lookup
 }
-pub fn generate_black_pawn_ray_attacks() -> Vec<Vec<usize>> {
+pub fn _generate_black_pawn_ray_attacks() -> Vec<Vec<usize>> {
     let board = empty_board();
     let mut ray_attack_lookup: Vec<Vec<usize>> = Vec::new();
     for rank in RANK_1..=RANK_8 {
