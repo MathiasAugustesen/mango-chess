@@ -24,7 +24,7 @@ fn main() {
     let mut maximizing = true;
 
     loop {
-        let (best_eval, best_move) = engine::minimax(&board_state, 5, maximizing);
+        let (best_eval, best_move) = engine::minimax(&board_state, 4, maximizing);
         let best_move = ChessMove::from(best_move.unwrap());
         println!("Evaluation is {} after the move {}", best_eval, best_move);
         board_state.make_move(best_move.0, best_move.1);
