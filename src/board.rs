@@ -451,6 +451,7 @@ impl BoardState {
     pub fn update_board_state(&mut self, position: ChessCell, destination: ChessCell) {
         self.swap_to_move();
         self.clear_en_passant_square();
+        self.last_move = Some((position, destination));
     }
 }
 // ChessCell represents a valid algebraic square on the board
