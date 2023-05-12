@@ -351,35 +351,34 @@ impl BoardState {
     pub fn clear_en_passant_square(&mut self) {
         self.en_passant_square = None;
     }
-    pub fn move_piece(&mut self, position: ChessCell, destination: ChessCell) {
-        if let Square::Full(piece) = self.board[position.0][position.1] {
-            self.board[position.0][position.1] = Square::Empty;
-            self.board[destination.0][destination.1] = Square::Full(piece);
-            match piece.color() {
-                White => {
-                    if piece.kind() == King {
-                        self.white_king_location = destination;
-                    }
-                    // Flips the previous position, removing it.
-                    self.white_bitboard ^= 1 << position.as_index();
-                    // Logical OR adds the new position to the bitboard
-                    self.white_bitboard |= 1 << destination.as_index();
-                    let mask = !(1 << destination.as_index());
-                    self.black_bitboard &= mask;
+    pub fn make_move(&mut self, position: ChessCell, destination: ChessCell) {
+        let piece = self.board[position.0][position.1].piece();
+
+        self.board[position.0][position.1] = Square::Empty;
+        self.board[destination.0][destination.1] = Square::Full(piece);
+        match piece.color() {
+            White => {
+                if piece.kind() == King {
+                    self.white_king_location = destination;
                 }
-                Black => {
-                    if piece.kind() == King {
-                        self.black_king_location = destination;
-                    }
-                    self.black_bitboard ^= 1 << position.as_index();
-                    self.black_bitboard |= 1 << destination.as_index();
-                    let mask = !(1 << destination.as_index());
-                    self.white_bitboard &= mask;
-                }
+                // Flips the previous position, removing it.
+                self.white_bitboard ^= 1 << position.as_index();
+                // Logical OR adds the new position to the bitboard
+                self.white_bitboard |= 1 << destination.as_index();
+                let mask = !(1 << destination.as_index());
+                self.black_bitboard &= mask;
             }
-        } else {
-            panic!("Tried to move piece but there was not one at the given position.");
+            Black => {
+                if piece.kind() == King {
+                    self.black_king_location = destination;
+                }
+                self.black_bitboard ^= 1 << position.as_index();
+                self.black_bitboard |= 1 << destination.as_index();
+                let mask = !(1 << destination.as_index());
+                self.white_bitboard &= mask;
+            }
         }
+        self.update_board_state(position, destination);
     }
     pub fn get_piece_positions(&self, color: PieceColor) -> Vec<ChessCell> {
         let mut piece_positions = Vec::new();
@@ -395,13 +394,13 @@ impl BoardState {
         }
         piece_positions
     }
-    // Given an arbitrary position, determine if the position is legal given that the last move was played by self.to_move.
+    // Given an arbitrary position, determine if the position is legal given that the player next to move is self.to_move.
     // This method does not make any assumptions about how the move was made
     //
     // First, a list of all enemy pieces that x-ray the king is generated with a lookup table. If this list is empty, the king is safe.
-    // afterwards,
+    // For all pieces that x-ray the king, the moves of that piece are generated
     pub fn is_valid_move(&self) -> bool {
-        let king_location = match self.to_move {
+        let king_location = match self.to_move.opposite() {
             White => self.white_king_location,
             Black => self.black_king_location,
         };

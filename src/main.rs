@@ -7,6 +7,7 @@ use board::ChessCell;
 pub mod engine;
 pub mod evaluation;
 mod ray_attacks;
+const MAXIMIZING: bool = true;
 pub struct ChessMove(ChessCell, ChessCell);
 impl std::fmt::Display for ChessMove {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -20,14 +21,13 @@ impl From<(ChessCell, ChessCell)> for ChessMove {
 }
 fn main() {
     let mut board_state = BoardState::new_game();
-    dbg!(board_state.white_bitboard, board_state.black_bitboard);
-    let (best_eval, best_move) = engine::maxi(&board_state, 5);
-    let best_move = best_move.unwrap();
-    println!(
-        "Evaluation is {} after playing the move {}",
-        best_eval,
-        ChessMove::from(best_move)
-    );
-    board_state.move_piece(best_move.0, best_move.1);
-    dbg!(board_state.white_bitboard, board_state.black_bitboard);
+    let mut maximizing = true;
+
+    loop {
+        let (best_eval, best_move) = engine::minimax(&board_state, 5, maximizing);
+        let best_move = ChessMove::from(best_move.unwrap());
+        println!("Evaluation is {} after the move {}", best_eval, best_move);
+        board_state.make_move(best_move.0, best_move.1);
+        maximizing = !maximizing;
+    }
 }
