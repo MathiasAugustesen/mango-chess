@@ -396,16 +396,26 @@ impl BoardState {
     // This method does not make any assumptions about how the move was made
     //
     // First, a list of all enemy pieces that x-ray the king is generated with a lookup table. If this list is empty, the king is safe.
-    // For all pieces that x-ray the king, the moves of that piece are generated
+    // For all pieces that x-ray the king, the moves of that piece are generated, and will return true if any piece attacks the king.
     pub fn is_valid_move(&self) -> bool {
         let king_location = match self.to_move.opposite() {
             White => self.white_king_location,
             Black => self.black_king_location,
         };
+        /*
+        This block perform the regular 'check every piece' way of validating pseudo moves.
+        let mut ray_attackers: Vec<(Piece, ChessCell)> = Vec::new();
+        let enemy_pieces = self.get_piece_positions(self.to_move);
+        for piece_position in enemy_pieces {
+            let piece = self.board[piece_position.0][piece_position.1].piece();
+            ray_attackers.push((piece, piece_position));
+        }
+        */
         let ray_attackers = self.ray_attackers(king_location.as_index(), self.to_move);
         if ray_attackers.len() == 0 {
             return true;
         }
+        
         let mut enemy_moves: Vec<(ChessCell, ChessCell)> = Vec::new();
         for (piece, position) in ray_attackers {
             generate_pseudo_moves_for_piece(piece, self, position, &mut enemy_moves);
