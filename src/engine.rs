@@ -1,7 +1,6 @@
 use crate::board::{BoardState, ChessCell};
 use crate::evaluation;
 use crate::move_generation::generate_moves;
-use crate::ChessMove;
 pub fn minimax(
     board_state: &BoardState,
     depth: u8,

@@ -152,19 +152,17 @@ impl Piece {
 impl TryFrom<char> for Piece {
     type Error = &'static str;
     fn try_from(value: char) -> Result<Self, Self::Error> {
-        let piece = match value {
-            'P' => Piece::pawn(White),
-            'N' => Piece::knight(White),
-            'B' => Piece::bishop(White),
-            'R' => Piece::rook(White),
-            'Q' => Piece::queen(White),
-            'K' => Piece::king(White),
-            'p' => Piece::pawn(Black),
-            'n' => Piece::knight(Black),
-            'b' => Piece::bishop(Black),
-            'r' => Piece::rook(Black),
-            'q' => Piece::queen(Black),
-            'k' => Piece::king(Black),
+        let color = match value.is_lowercase() {
+            true => Black,
+            false => White,
+        };
+        let piece = match value.to_ascii_lowercase() {
+            'p' => Piece::pawn(color),
+            'n' => Piece::knight(color),
+            'b' => Piece::bishop(color),
+            'r' => Piece::rook(color),
+            'q' => Piece::queen(color),
+            'k' => Piece::king(color),
             _ => return Err("Character is not a valid chess piece"),
         };
         Ok(piece)
@@ -404,7 +402,7 @@ impl BoardState {
             White => self.white_king_location,
             Black => self.black_king_location,
         };
-        let ray_attackers = self.ray_attackers(king_location.as_index());
+        let ray_attackers = self.ray_attackers(king_location.as_index(), self.to_move);
         if ray_attackers.len() == 0 {
             return true;
         }
@@ -421,12 +419,15 @@ impl BoardState {
         }
         true
     }
-    // This function will search a lookup table and check if the piece is in an x-ray attack.
-    // Primarily used for seeing if the king is in check, but works for any square on the board.
-    pub fn ray_attackers(&self, piece_location_index: usize) -> Vec<(Piece, ChessCell)> {
+    // This function will search a lookup table and check if the given piece location is in an x-ray attack by the specified color.
+    // Currently used for seeing if the king is in check, but works for any square on the board.
+    pub fn ray_attackers(
+        &self,
+        piece_location_index: usize,
+        color: PieceColor,
+    ) -> Vec<(Piece, ChessCell)> {
         let mut ray_attackers: Vec<(Piece, ChessCell)> = Vec::new();
-        let enemy_color = self.to_move.opposite();
-        for piece_position in self.get_piece_positions(enemy_color) {
+        for piece_position in self.get_piece_positions(color) {
             let attacking_square = self.board[piece_position.0][piece_position.1];
             let attacking_piece = attacking_square.piece();
             let attacked_squares = match (attacking_piece.color(), attacking_piece.kind()) {
@@ -444,9 +445,7 @@ impl BoardState {
         }
         ray_attackers
     }
-    // update_board_state is responsible for changing the state related to things that are not necessary
-    // for checking validity of a move. This includes unsetting en passant squares, the player to move
-    // and the last move. Responsibility for moving the
+    // update_board_state is responsible for updating the entire game state after a move.
     pub fn update_board_state(&mut self, position: ChessCell, destination: ChessCell) {
         self.swap_to_move();
         self.clear_en_passant_square();
