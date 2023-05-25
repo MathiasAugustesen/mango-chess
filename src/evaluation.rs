@@ -1,6 +1,27 @@
 use crate::board::BoardState;
 use crate::board::Piece;
 use crate::board::PieceColor::*;
+pub fn evaluate(board_state: &BoardState) -> i32 {
+    let board = board_state.board;
+    let mut evaluation: i32 = 0;
+    // add white evaluation
+    evaluation += board_state
+        .get_piece_positions(White)
+        .into_iter()
+        .map(|pos| evaluate_piece(board[pos.0][pos.1].piece(), 63 - pos.as_index()))
+        .sum::<i32>();
+    // subtract black evaluation
+    evaluation -= board_state
+        .get_piece_positions(Black)
+        .into_iter()
+        .map(|pos| evaluate_piece(board[pos.0][pos.1].piece(), pos.as_index()))
+        .sum::<i32>();
+    evaluation
+}
+fn evaluate_piece(piece: Piece, pos: usize) -> i32 {
+    PIECE_VALUES[piece.index()] + POSITION_VALUES[piece.index()][pos]
+}
+
 const PIECE_VALUES: [i32; 6] = [100, 300, 325, 500, 900, 10000];
 const POSITION_VALUES: [[i32; 64]; 6] = [
     PAWN_POSITION_VALUES,
@@ -76,23 +97,3 @@ const KING_POSITION_VALUES: [i32; 64] = [
     -20, -5,  5,   -15, -15, -20, -10, -20,
     5,   15,  1,   0,   1,   10,  15,  5,
 ];
-pub fn evaluate(board_state: &BoardState) -> i32 {
-    let board = board_state.board;
-    let mut evaluation: i32 = 0;
-    // add white evaluation
-    evaluation += board_state
-        .get_piece_positions(White)
-        .into_iter()
-        .map(|pos| evaluate_piece(board[pos.0][pos.1].piece(), 63 - pos.as_index()))
-        .sum::<i32>();
-    // subtract black evaluation
-    evaluation -= board_state
-        .get_piece_positions(Black)
-        .into_iter()
-        .map(|pos| evaluate_piece(board[pos.0][pos.1].piece(), pos.as_index()))
-        .sum::<i32>();
-    evaluation
-}
-fn evaluate_piece(piece: Piece, pos: usize) -> i32 {
-    PIECE_VALUES[piece.index()] + POSITION_VALUES[piece.index()][pos]
-}
