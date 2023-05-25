@@ -49,7 +49,7 @@ pub fn castling_rights_from_fen(fen_castling_rights: &str) -> Result<CastlingRig
     }
     if !fen_castling_rights
         .chars()
-        .all(|c| matches!(c, 'q' | 'k' | 'Q' | 'K'))
+        .all(|c| matches!(c, 'q' | 'k' | 'Q' | 'K' | '-'))
     {
         return Err("Failed to parse FEN string: Castling rights contained invalid characters");
     }
