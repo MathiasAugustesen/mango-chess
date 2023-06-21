@@ -19,6 +19,12 @@ impl PieceColor {
             Black => White,
         }
     }
+    pub fn relative_value(self) -> i32 {
+        match self {
+            White => 1,
+            Black => -1,
+        }
+    }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PieceKind {
@@ -415,7 +421,7 @@ impl BoardState {
         if ray_attackers.len() == 0 {
             return true;
         }
-        
+
         let mut enemy_moves: Vec<(ChessCell, ChessCell)> = Vec::new();
         for (piece, position) in ray_attackers {
             generate_pseudo_moves_for_piece(piece, self, position, &mut enemy_moves);
