@@ -1,46 +1,35 @@
 use crate::board::{BoardState, ChessCell};
 use crate::evaluation;
 use crate::move_generation::generate_moves;
-use std::cmp;
-pub fn minimax(
+use rand::seq::SliceRandom;
+use rand::thread_rng;
+pub fn negamax(
     board_state: &BoardState,
     depth: u8,
     alpha: i32,
     beta: i32,
-    maximizing: bool,
+    counter: &mut i32,
+    prunes: &mut i32,
 ) -> (i32, Option<(ChessCell, ChessCell)>) {
     if depth == 0 {
+        *counter += 1;
         return (evaluation::evaluate(&board_state), None);
     }
     let mut best_move = None;
-    if maximizing {
-        let mut max_eval = i32::MIN;
-        for position in generate_moves(&board_state) {
-            let (eval, _) = minimax(&position, depth - 1, alpha, beta, false);
-            if eval > max_eval {
-                max_eval = eval;
-                best_move = position.last_move;
-            }
-            let alpha = cmp::max(alpha, eval);
-            if beta <= alpha {
-                break
-            }
+    let mut best_score = -i32::MAX;
+    let mut generated_moves = generate_moves(&board_state);
+    for position in generated_moves {
+        let (score, _) = negamax(&position, depth - 1, -beta, -alpha, counter, prunes);
+        let score = -score;
+        let alpha = alpha.max(score);
+        if score >= best_score {
+            best_score = score;
+            best_move = position.last_move;
         }
-        return (max_eval, best_move)   
-    }
-    else {
-        let mut min_eval = i32::MAX;
-        for position in generate_moves(&board_state) {
-            let (eval, _) = minimax(&position, depth - 1, alpha, beta, true);
-            if eval < min_eval {
-                min_eval = eval;
-                best_move = position.last_move;
-            }
-            let beta = cmp::min(beta, eval);
-            if beta <= alpha {
-                break
-            }
+        if alpha >= beta {
+            *prunes += 1;
+            break;
         }
-        return (min_eval, best_move)
     }
+    (best_score, best_move)
 }

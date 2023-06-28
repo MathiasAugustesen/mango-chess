@@ -7,7 +7,7 @@ use board::ChessCell;
 pub mod engine;
 pub mod evaluation;
 mod ray_attacks;
-const DEPTH: u8 = 4;
+const DEPTH: u8 = 5;
 use crate::board::PieceColor::*;
 pub struct ChessMove(ChessCell, ChessCell);
 impl std::fmt::Display for ChessMove {
@@ -22,17 +22,27 @@ impl From<(ChessCell, ChessCell)> for ChessMove {
 }
 fn main() {
     let mut board_state = BoardState::new_game();
-    let mut maximizing = match board_state.to_move {
-        White => true,
-        Black => false,
-    };
-
     loop {
-        let (best_eval, best_move) =
-            engine::minimax(&board_state, DEPTH, i32::MIN, i32::MAX, maximizing);
+        let mut counter = 0;
+        let mut prunes = 0;
+        let (best_eval, best_move) = engine::negamax(
+            &board_state,
+            DEPTH,
+            -i32::MAX,
+            i32::MAX,
+            &mut counter,
+            &mut prunes,
+        );
         let best_move = ChessMove::from(best_move.unwrap());
-        println!("Evaluation is {} after the move {}", best_eval, best_move);
+        let absolute_eval = best_eval
+            * match board_state.to_move {
+                White => 1,
+                Black => -1,
+            };
+        println!(
+            "Evaluation is {} after the move {}. Total searched nodes: {}. Pruned {} branches",
+            absolute_eval, best_move, counter, prunes
+        );
         board_state.make_move(best_move.0, best_move.1);
-        maximizing = !maximizing;
     }
 }
