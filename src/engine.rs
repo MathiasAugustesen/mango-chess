@@ -14,8 +14,8 @@ pub fn negamax(
         return evaluation::evaluate(&board_state);
     }
     let mut best_eval = -i32::MAX;
-    let generated_moves = generate_moves(&board_state);
-    //generated_moves.sort_by(|a, b| evaluation::evaluate(a).cmp(&evaluation::evaluate(b)));
+    let mut generated_moves = generate_moves(&board_state);
+    //generated_moves.sort_unstable_by_key(evaluation::evaluate);
     for position in generated_moves {
         let eval = -negamax(&position, depth - 1, -beta, -alpha, counter, prunes);
         let alpha = alpha.max(eval);
@@ -28,7 +28,10 @@ pub fn negamax(
     best_eval
 }
 
-pub fn search(board_state: &BoardState, depth: u8) -> (i32, Option<(ChessCell, ChessCell)>) {
+pub fn search(
+    board_state: &BoardState,
+    depth: u8,
+) -> (i32, Option<(ChessCell, ChessCell)>, i32, i32) {
     let mut alpha = -i32::MAX;
     let beta = i32::MAX;
     let mut best_eval = -i32::MAX;
@@ -37,7 +40,12 @@ pub fn search(board_state: &BoardState, depth: u8) -> (i32, Option<(ChessCell, C
     let mut prunes = 0;
     let possible_moves = generate_moves(board_state);
     if possible_moves.is_empty() {
-        return (evaluation::evaluate(board_state), None);
+        return (
+            evaluation::evaluate(board_state),
+            None,
+            nodes_evaluated,
+            prunes,
+        );
     }
     for mov in possible_moves {
         let eval = -negamax(
@@ -58,5 +66,5 @@ pub fn search(board_state: &BoardState, depth: u8) -> (i32, Option<(ChessCell, C
         "evaluated {} nodes and pruned {} branches",
         nodes_evaluated, prunes
     );
-    (best_eval, best_move)
+    (best_eval, best_move, nodes_evaluated, prunes)
 }
