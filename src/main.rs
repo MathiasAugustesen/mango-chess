@@ -22,17 +22,14 @@ impl From<(ChessCell, ChessCell)> for ChessMove {
 }
 fn main() {
     let mut board_state = BoardState::new_game();
+    let mut total_nodes_evaluated = 0;
+    let mut total_prunes = 0;
+    let mut moves = 0;
     loop {
-        let mut counter = 0;
-        let mut prunes = 0;
-        let (best_eval, best_move) = engine::negamax(
-            &board_state,
-            DEPTH,
-            -i32::MAX,
-            i32::MAX,
-            &mut counter,
-            &mut prunes,
-        );
+        let (best_eval, best_move, nodes_evaluated, prunes) = engine::search(&board_state, DEPTH);
+        total_nodes_evaluated += nodes_evaluated;
+        total_prunes += prunes;
+        moves += 1;
         let best_move = ChessMove::from(best_move.unwrap());
         let absolute_eval = best_eval
             * match board_state.to_move {
@@ -40,8 +37,8 @@ fn main() {
                 Black => -1,
             };
         println!(
-            "Evaluation is {} after the move {}. Total searched nodes: {}. Pruned {} branches",
-            absolute_eval, best_move, counter, prunes
+            "Evaluation is {} with the move {}. After {} turns, searched a grand total of {} nodes and pruned {} branches in total.",
+            absolute_eval, best_move, moves, total_nodes_evaluated, total_prunes
         );
         board_state.make_move(best_move.0, best_move.1);
     }

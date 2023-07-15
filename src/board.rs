@@ -221,33 +221,62 @@ impl CastlingRights {
         self.black_queen_side_castling = false;
     }
 }
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct BitBoard(pub u64);
+impl BitBoard {
+    pub fn remove_piece(&mut self, index: usize) {
+        let mask = !(1 << index);
+        self.0 &= mask;
+    }
+    pub fn add_piece(&mut self, index: usize) {
+        let mask = 1 << index;
+        self.0 |= mask;
+    }
+    pub fn bits_mut(&mut self) -> &mut u64 {
+        &mut self.0
+    }
+}
+impl Iterator for BitBoard {
+    type Item = ChessCell;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.0 == 0 {
+            return None;
+        }
+        let position = self.0.leading_zeros() as usize;
+        let cell = ChessCell::from_index(position);
+        self.0 ^= 1 << position;
+        Some(cell)
+    }
+}
 #[derive(Clone, PartialEq, Debug)]
 pub struct BoardState {
     pub board: [[Square; 12]; 12],
     pub to_move: PieceColor,
     // Keeps track of all the white pieces
-    pub white_bitboard: u64,
+    pub white_bitboard: BitBoard,
     // Keeps track of all the black pieces
-    pub black_bitboard: u64,
+    pub black_bitboard: BitBoard,
     pub white_king_location: ChessCell,
     pub black_king_location: ChessCell,
     pub castling_rights: CastlingRights,
     pub en_passant_square: Option<ChessCell>,
     pub last_move: Option<(ChessCell, ChessCell)>,
     pub pawn_promotion: Option<ChessCell>,
+    pub last_capture: Option<Piece>,
 }
 impl BoardState {
     pub fn empty_game() -> BoardState {
         let board = empty_board();
         let to_move = White;
-        let white_bitboard: u64 = 0;
-        let black_bitboard: u64 = 0;
+        let white_bitboard = BitBoard(0);
+        let black_bitboard = BitBoard(0);
         let white_king_location = ChessCell(100, 100);
         let black_king_location = ChessCell(100, 100);
         let castling_rights = CastlingRights::no_castling_rights();
         let en_passant_square = None;
         let last_move = None;
         let pawn_promotion = None;
+        let last_capture = None;
         return BoardState {
             board,
             to_move,
@@ -259,6 +288,7 @@ impl BoardState {
             en_passant_square,
             last_move,
             pawn_promotion,
+            last_capture,
         };
     }
     pub fn new_game() -> BoardState {
@@ -295,6 +325,7 @@ impl BoardState {
         let en_passant_square = None;
         let last_move = None;
         let pawn_promotion = None;
+        let last_capture = None;
         BoardState {
             board,
             to_move,
@@ -306,6 +337,7 @@ impl BoardState {
             en_passant_square,
             last_move,
             pawn_promotion,
+            last_capture,
         }
     }
     pub fn from_fen(fen: &str) -> Result<BoardState, &str> {
@@ -343,6 +375,7 @@ impl BoardState {
             en_passant_square,
             last_move: None,
             pawn_promotion: None,
+            last_capture: None,
         };
         Ok(board_state)
     }
@@ -357,32 +390,33 @@ impl BoardState {
     }
     pub fn make_move(&mut self, position: ChessCell, destination: ChessCell) {
         let piece = self.board[position.0][position.1].piece();
-
         self.board[position.0][position.1] = Square::Empty;
+
+        let attacked_square = self.board[destination.0][destination.1];
+        if attacked_square.has_piece() {
+            self.last_capture = Some(attacked_square.piece());
+        } else {
+            self.last_capture = None;
+        }
         self.board[destination.0][destination.1] = Square::Full(piece);
-        match piece.color() {
-            White => {
-                if piece.kind() == King {
-                    self.white_king_location = destination;
-                }
-                // Flips the previous position, removing it.
-                self.white_bitboard ^= 1 << position.as_index();
-                // Logical OR adds the new position to the bitboard
-                self.white_bitboard |= 1 << destination.as_index();
-                let mask = !(1 << destination.as_index());
-                self.black_bitboard &= mask;
-            }
-            Black => {
-                if piece.kind() == King {
-                    self.black_king_location = destination;
-                }
-                self.black_bitboard ^= 1 << position.as_index();
-                self.black_bitboard |= 1 << destination.as_index();
-                let mask = !(1 << destination.as_index());
-                self.white_bitboard &= mask;
+
+        if piece.kind() == King {
+            match piece.color() {
+                White => self.white_king_location = destination,
+                Black => self.black_king_location = destination,
             }
         }
         self.update_board_state(position, destination);
+    }
+    fn update_bitboards(&mut self, position: usize, destination: usize) {
+        let (current_player_bitboard, opposing_player_bitboard) = match self.to_move {
+            White => (&mut self.white_bitboard, &mut self.black_bitboard),
+            Black => (&mut self.black_bitboard, &mut self.white_bitboard),
+        };
+        current_player_bitboard.remove_piece(position);
+        current_player_bitboard.add_piece(destination);
+
+        opposing_player_bitboard.remove_piece(destination);
     }
     pub fn get_piece_positions(&self, color: PieceColor) -> Vec<ChessCell> {
         let mut piece_positions = Vec::new();
@@ -390,11 +424,11 @@ impl BoardState {
             White => self.white_bitboard,
             Black => self.black_bitboard,
         };
-        while bitboard != 0 {
-            let position = bitboard.trailing_zeros();
+        while bitboard.0 != 0 {
+            let position = bitboard.0.trailing_zeros();
             let cell = ChessCell::from_index(position as usize);
             piece_positions.push(cell);
-            bitboard ^= 1 << position;
+            bitboard.0 ^= 1 << position;
         }
         piece_positions
     }
@@ -461,11 +495,12 @@ impl BoardState {
         }
         ray_attackers
     }
-    // update_board_state is responsible for updating the entire game state after a move.
     pub fn update_board_state(&mut self, position: ChessCell, destination: ChessCell) {
-        self.swap_to_move();
+        self.update_bitboards(position.as_index(), destination.as_index());
         self.clear_en_passant_square();
         self.last_move = Some((position, destination));
+
+        self.swap_to_move();
     }
 }
 // ChessCell represents a valid algebraic square on the board
@@ -546,7 +581,7 @@ pub fn empty_board() -> [[Square; 12]; 12] {
     board
 }
 // Returns (white_bitboard, black_bitboard)
-pub fn get_bitboards(board: &[[Square; 12]; 12]) -> (u64, u64) {
+pub fn get_bitboards(board: &[[Square; 12]; 12]) -> (BitBoard, BitBoard) {
     let mut white_bitboard: u64 = 0;
     let mut black_bitboard: u64 = 0;
     let mut position: u64 = 0;
@@ -561,7 +596,7 @@ pub fn get_bitboards(board: &[[Square; 12]; 12]) -> (u64, u64) {
             position += 1;
         }
     }
-    (white_bitboard, black_bitboard)
+    (BitBoard(white_bitboard), BitBoard(black_bitboard))
 }
 // Returns (white_king_location, black_king_location)
 fn find_kings(board: &[[Square; 12]; 12]) -> Result<(ChessCell, ChessCell), &'static str> {
@@ -643,13 +678,12 @@ mod tests {
     fn get_bitboards_returns_the_right_bitboards() {
         let board_state = BoardState::new_game();
         let (white_bitboard, black_bitboard) = get_bitboards(&board_state.board);
-        assert_eq!(white_bitboard, 0xFFFF);
-        assert_eq!(black_bitboard, 0xFFFF << 48);
+        assert_eq!(white_bitboard.0, 0xFFFF);
+        assert_eq!(black_bitboard.0, 0xFFFF << 48);
     }
     #[test]
     fn get_piece_positions_for_starting_position() {
         let board_state = BoardState::new_game();
-        let (white_bitboard, black_bitboard) = get_bitboards(&board_state.board);
         let white_positions = board_state.get_piece_positions(White);
         let black_positions = board_state.get_piece_positions(Black);
         for rank in RANK_1..=RANK_2 {

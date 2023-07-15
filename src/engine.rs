@@ -1,8 +1,6 @@
 use crate::board::{BoardState, ChessCell};
 use crate::evaluation;
 use crate::move_generation::generate_moves;
-use rand::seq::SliceRandom;
-use rand::thread_rng;
 pub fn negamax(
     board_state: &BoardState,
     depth: u8,
@@ -10,26 +8,63 @@ pub fn negamax(
     beta: i32,
     counter: &mut i32,
     prunes: &mut i32,
-) -> (i32, Option<(ChessCell, ChessCell)>) {
+) -> i32 {
     if depth == 0 {
         *counter += 1;
-        return (evaluation::evaluate(&board_state), None);
+        return evaluation::evaluate(&board_state);
     }
-    let mut best_move = None;
-    let mut best_score = -i32::MAX;
+    let mut best_eval = -i32::MAX;
     let mut generated_moves = generate_moves(&board_state);
+    //generated_moves.sort_unstable_by_key(evaluation::evaluate);
     for position in generated_moves {
-        let (score, _) = negamax(&position, depth - 1, -beta, -alpha, counter, prunes);
-        let score = -score;
-        let alpha = alpha.max(score);
-        if score >= best_score {
-            best_score = score;
-            best_move = position.last_move;
-        }
+        let eval = -negamax(&position, depth - 1, -beta, -alpha, counter, prunes);
+        let alpha = alpha.max(eval);
+        best_eval = eval.max(best_eval);
         if alpha >= beta {
             *prunes += 1;
             break;
         }
     }
-    (best_score, best_move)
+    best_eval
+}
+
+pub fn search(
+    board_state: &BoardState,
+    depth: u8,
+) -> (i32, Option<(ChessCell, ChessCell)>, i32, i32) {
+    let mut alpha = -i32::MAX;
+    let beta = i32::MAX;
+    let mut best_eval = -i32::MAX;
+    let mut best_move = None;
+    let mut nodes_evaluated = 0;
+    let mut prunes = 0;
+    let possible_moves = generate_moves(board_state);
+    if possible_moves.is_empty() {
+        return (
+            evaluation::evaluate(board_state),
+            None,
+            nodes_evaluated,
+            prunes,
+        );
+    }
+    for mov in possible_moves {
+        let eval = -negamax(
+            &mov,
+            depth - 1,
+            -beta,
+            -alpha,
+            &mut nodes_evaluated,
+            &mut prunes,
+        );
+        if eval > best_eval {
+            best_eval = eval;
+            best_move = mov.last_move.clone();
+        }
+        alpha = alpha.max(eval);
+    }
+    println!(
+        "evaluated {} nodes and pruned {} branches",
+        nodes_evaluated, prunes
+    );
+    (best_eval, best_move, nodes_evaluated, prunes)
 }
