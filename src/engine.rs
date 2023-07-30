@@ -1,5 +1,5 @@
-use crate::board::{BoardState, ChessCell};
-use crate::evaluation;
+use crate::board::BoardState;
+use crate::{evaluation, ChessMove};
 use crate::move_generation::generate_moves;
 pub fn negamax(
     board_state: &BoardState,
@@ -14,7 +14,7 @@ pub fn negamax(
         return evaluation::evaluate(&board_state);
     }
     let mut best_eval = -i32::MAX;
-    let mut generated_moves = generate_moves(&board_state);
+    let generated_moves = generate_moves(&board_state);
     //generated_moves.sort_unstable_by_key(evaluation::evaluate);
     for position in generated_moves {
         let eval = -negamax(&position, depth - 1, -beta, -alpha, counter, prunes);
@@ -31,7 +31,7 @@ pub fn negamax(
 pub fn search(
     board_state: &BoardState,
     depth: u8,
-) -> (i32, Option<(ChessCell, ChessCell)>, i32, i32) {
+) -> (i32, Option<ChessMove>, i32, i32) {
     let mut alpha = -i32::MAX;
     let beta = i32::MAX;
     let mut best_eval = -i32::MAX;

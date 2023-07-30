@@ -1,3 +1,4 @@
+use crate::ChessMove;
 use crate::constants::*;
 use crate::fen;
 use crate::fen::castling_rights_from_fen;
@@ -260,7 +261,7 @@ pub struct BoardState {
     pub black_king_location: ChessCell,
     pub castling_rights: CastlingRights,
     pub en_passant_square: Option<ChessCell>,
-    pub last_move: Option<(ChessCell, ChessCell)>,
+    pub last_move: Option<ChessMove>,
     pub pawn_promotion: Option<ChessCell>,
     pub last_capture: Option<Piece>,
 }
@@ -388,35 +389,38 @@ impl BoardState {
     pub fn clear_en_passant_square(&mut self) {
         self.en_passant_square = None;
     }
-    pub fn make_move(&mut self, position: ChessCell, destination: ChessCell) {
-        let piece = self.board[position.0][position.1].piece();
-        self.board[position.0][position.1] = Square::Empty;
+    pub fn make_move(&mut self, mov: ChessMove) {
+        let start = mov.start;
+        let dest = mov.dest;
+        let piece = self.board[start.0][start.1].piece();
+        self.board[start.0][start.1] = Square::Empty;
 
-        let attacked_square = self.board[destination.0][destination.1];
+        let attacked_square = self.board[dest.0][dest.1];
         if attacked_square.has_piece() {
             self.last_capture = Some(attacked_square.piece());
         } else {
             self.last_capture = None;
         }
-        self.board[destination.0][destination.1] = Square::Full(piece);
+        self.board[dest.0][dest.1] = Square::Full(piece);
 
         if piece.kind() == King {
             match piece.color() {
-                White => self.white_king_location = destination,
-                Black => self.black_king_location = destination,
+                White => self.white_king_location = dest,
+                Black => self.black_king_location = dest,
             }
         }
-        self.update_board_state(position, destination);
+        self.update_board_state(mov);
     }
-    fn update_bitboards(&mut self, position: usize, destination: usize) {
+    fn update_bitboards(&mut self, mov: ChessMove) {
         let (current_player_bitboard, opposing_player_bitboard) = match self.to_move {
             White => (&mut self.white_bitboard, &mut self.black_bitboard),
             Black => (&mut self.black_bitboard, &mut self.white_bitboard),
         };
-        current_player_bitboard.remove_piece(position);
-        current_player_bitboard.add_piece(destination);
 
-        opposing_player_bitboard.remove_piece(destination);
+        current_player_bitboard.remove_piece(mov.start.as_index());
+        current_player_bitboard.add_piece(mov.dest.as_index());
+
+        opposing_player_bitboard.remove_piece(mov.dest.as_index());
     }
     pub fn get_piece_positions(&self, color: PieceColor) -> Vec<ChessCell> {
         let mut piece_positions = Vec::new();
@@ -451,17 +455,17 @@ impl BoardState {
             ray_attackers.push((piece, piece_position));
         }
         */
-        let ray_attackers = self.ray_attackers(king_location.as_index(), self.to_move);
+        let ray_attackers = self.ray_attackers(king_location, self.to_move);
         if ray_attackers.len() == 0 {
             return true;
         }
 
-        let mut enemy_moves: Vec<(ChessCell, ChessCell)> = Vec::new();
+        let mut enemy_moves: Vec<ChessMove> = Vec::new();
         for (piece, position) in ray_attackers {
             generate_pseudo_moves_for_piece(piece, self, position, &mut enemy_moves);
             let king_is_attacked = enemy_moves
                 .iter()
-                .map(|mov| mov.1)
+                .map(|mov| mov.dest)
                 .any(|attacked_square| attacked_square == king_location);
             if king_is_attacked {
                 return false;
@@ -473,32 +477,34 @@ impl BoardState {
     // Currently used for seeing if the king is in check, but works for any square on the board.
     pub fn ray_attackers(
         &self,
-        piece_location_index: usize,
+        target_square: ChessCell,
         color: PieceColor,
     ) -> Vec<(Piece, ChessCell)> {
+        let target_idx = target_square.as_index();
         let mut ray_attackers: Vec<(Piece, ChessCell)> = Vec::new();
-        for piece_position in self.get_piece_positions(color) {
-            let attacking_square = self.board[piece_position.0][piece_position.1];
+        for attacker in self.get_piece_positions(color) {
+            let attacker_idx = attacker.as_index();
+            let attacking_square = self.board[attacker.0][attacker.1];
             let attacking_piece = attacking_square.piece();
             let attacked_squares = match (attacking_piece.color(), attacking_piece.kind()) {
-                (White, Pawn) => WHITE_PAWN_RAY_ATTACKS[piece_position.as_index()],
-                (Black, Pawn) => BLACK_PAWN_RAY_ATTACKS[piece_position.as_index()],
-                (_, Knight) => KNIGHT_RAY_ATTACKS[piece_position.as_index()],
-                (_, Bishop) => BISHOP_RAY_ATTACKS[piece_position.as_index()],
-                (_, Rook) => ROOK_RAY_ATTACKS[piece_position.as_index()],
-                (_, Queen) => QUEEN_RAY_ATTACKS[piece_position.as_index()],
-                (_, King) => KING_RAY_ATTACKS[piece_position.as_index()],
+                (White, Pawn) => WHITE_PAWN_RAY_ATTACKS[attacker_idx],
+                (Black, Pawn) => BLACK_PAWN_RAY_ATTACKS[attacker_idx],
+                (_, Knight) => KNIGHT_RAY_ATTACKS[attacker_idx],
+                (_, Bishop) => BISHOP_RAY_ATTACKS[attacker_idx],
+                (_, Rook) => ROOK_RAY_ATTACKS[attacker_idx],
+                (_, Queen) => QUEEN_RAY_ATTACKS[attacker_idx],
+                (_, King) => KING_RAY_ATTACKS[attacker_idx],
             };
-            if attacked_squares.contains(&piece_location_index) {
-                ray_attackers.push((attacking_piece, piece_position));
+            if attacked_squares.contains(&target_idx) {
+                ray_attackers.push((attacking_piece, attacker));
             }
         }
         ray_attackers
     }
-    pub fn update_board_state(&mut self, position: ChessCell, destination: ChessCell) {
-        self.update_bitboards(position.as_index(), destination.as_index());
+    pub fn update_board_state(&mut self, mov: ChessMove) {
+        self.update_bitboards(mov);
         self.clear_en_passant_square();
-        self.last_move = Some((position, destination));
+        self.last_move = Some(mov);
 
         self.swap_to_move();
     }
@@ -670,8 +676,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn create_board_from_fen_with_invalid_length_panics() {
-        let board_state: BoardState =
-            BoardState::from_fen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR KQkq e3 0 1")
+        BoardState::from_fen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR KQkq e3 0 1")
                 .unwrap();
     }
     #[test]
@@ -702,7 +707,6 @@ mod tests {
         let board_state =
             BoardState::from_fen("rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPPKPPP/RNBQ1BNR b kq - 1 2")
                 .unwrap();
-        let (white_bitboard, black_bitboard) = get_bitboards(&board_state.board);
         let white_positions = board_state.get_piece_positions(White);
         let white_bongcloud_positions = [
             ChessCell(RANK_1, A_FILE),

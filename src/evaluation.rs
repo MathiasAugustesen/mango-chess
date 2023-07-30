@@ -21,7 +21,7 @@ pub fn evaluate(board_state: &BoardState) -> i32 {
 fn evaluate_piece(piece: Piece, pos: usize) -> i32 {
     PIECE_VALUES[piece.index()] + POSITION_VALUES[piece.index()][pos]
 }
-pub fn evaluate_game_end(board_state: &BoardState) -> i32 {
+pub fn evaluate_game_end() -> i32 {
     0
 }
 const PIECE_VALUES: [i32; 6] = [100, 300, 325, 500, 900, 10000];
