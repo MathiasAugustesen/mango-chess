@@ -12,14 +12,13 @@ use crate::ray_attacks::KNIGHT_RAY_ATTACKS;
 const BISHOP_DIRECTIONS: [(i32, i32); 4] = [(-1, -1), (-1, 1), (1, -1), (1, 1)];
 const ROOK_DIRECTIONS: [(i32, i32); 4] = [(-1, 0), (0, -1), (0, 1), (1, 0)];
 pub fn generate_moves(board_state: &BoardState) -> Vec<BoardState> {
-    let board = board_state.board;
     let mut new_moves: Vec<BoardState> = Vec::with_capacity(16);
     let mut potential_moves: Vec<ChessMove> = Vec::with_capacity(16);
     let player_to_move = board_state.to_move;
     let piece_positions = board_state.get_piece_positions(player_to_move);
 
     for position in piece_positions {
-        if let Square::Full(piece) = board[position.0][position.1] {
+        if let Square::Full(piece) = *board_state.square(position) {
             generate_pseudo_moves_for_piece(piece, board_state, position, &mut potential_moves);
         }
     }
@@ -56,23 +55,31 @@ fn white_pawn_moves(
     position: ChessCell,
     moves: &mut Vec<ChessMove>,
 ) {
-    let board = board_state.board;
     let ChessCell(rank, file) = position;
-    let left_capture = board[rank + 1][file - 1];
-    if left_capture.is_enemy_of(White) {
-        moves.push((position, ChessCell(rank + 1, file - 1)).into())
+    let left_cap = ChessCell(rank + 1, file - 1);
+    let target = board_state.square(left_cap);
+    if target.is_enemy_of(White) {
+        moves.push((position, left_cap).into())
     }
-    let right_capture = board[rank + 1][file + 1];
-    if right_capture.is_enemy_of(White) {
-        moves.push((position, ChessCell(rank + 1, file + 1)).into())
+
+    let right_cap = ChessCell(rank + 1, file + 1);
+    let target = board_state.square(right_cap);
+    if target.is_enemy_of(White) {
+        moves.push((position, right_cap).into())
     }
-    let one_forward = board[rank + 1][file];
-    if one_forward.is_empty() {
-        moves.push((position, ChessCell(rank + 1, file)).into());
-        let two_forward = board[rank + 2][file];
-        if rank == RANK_2 && two_forward.is_empty() {
-            moves.push((position, ChessCell(rank + 2, file)).into());
+
+    let one_forward = ChessCell(rank + 1, file);
+    let target = board_state.square(one_forward);
+    if target.is_empty() {
+        moves.push((position, one_forward).into());
+
+        if rank == RANK_2 {
+        let two_forward = ChessCell(rank + 2, file);
+        let target = board_state.square(two_forward);
+        if target.is_empty() {
+            moves.push((position, two_forward).into());
         }
+    }
     }
 }
 
@@ -81,23 +88,31 @@ fn black_pawn_moves(
     position: ChessCell,
     moves: &mut Vec<ChessMove>,
 ) {
-    let board = board_state.board;
     let ChessCell(rank, file) = position;
-    let left_capture = board[rank - 1][file - 1];
-    if left_capture.is_enemy_of(Black) {
-        moves.push((position, ChessCell(rank - 1, file - 1)).into())
+    let left_cap = ChessCell(rank - 1, file - 1);
+    let target = board_state.square(left_cap);
+    if target.is_enemy_of(Black) {
+        moves.push((position, left_cap).into())
     }
-    let right_capture = board[rank - 1][file + 1];
-    if right_capture.is_enemy_of(Black) {
-        moves.push((position, ChessCell(rank - 1, file + 1)).into())
+
+    let right_cap = ChessCell(rank - 1, file + 1);
+    let target = board_state.square(right_cap);
+    if target.is_enemy_of(Black) {
+        moves.push((position, right_cap).into())
     }
-    let one_forward = board[rank - 1][file];
-    if one_forward.is_empty() {
-        moves.push((position, ChessCell(rank - 1, file)).into());
-        let two_forward = board[rank - 2][file];
-        if rank == RANK_7 && two_forward.is_empty() {
-            moves.push((position, ChessCell(rank - 2, file)).into());
+
+    let one_forward = ChessCell(rank - 1, file);
+    let target = board_state.square(one_forward);
+    if target.is_empty() {
+        moves.push((position, one_forward).into());
+
+        if rank == RANK_7 {
+        let two_forward = ChessCell(rank - 2, file);
+        let target = board_state.square(two_forward);
+        if target.is_empty() {
+            moves.push((position, two_forward).into());
         }
+    }
     }
 }
 pub fn knight_moves(
@@ -106,13 +121,12 @@ pub fn knight_moves(
     position: ChessCell,
     moves: &mut Vec<ChessMove>,
 ) {
-    let board = board_state.board;
     let destinations = KNIGHT_RAY_ATTACKS[position.as_index()];
     for destination in destinations {
-        let attacked_cell = ChessCell::from_index(*destination);
-        let attacked_square = board[attacked_cell.0][attacked_cell.1];
+        let target = ChessCell::from_index(*destination);
+        let attacked_square = board_state.square(target);
         if attacked_square.is_empty_or_enemy_of(color) {
-            moves.push((position, attacked_cell).into());
+            moves.push((position, target).into());
         }
     }
 }
@@ -122,22 +136,22 @@ pub fn bishop_moves(
     position: ChessCell,
     moves: &mut Vec<ChessMove>,
 ) {
-    let board = board_state.board;
     for direction in &BISHOP_DIRECTIONS {
         let mut distance = 1;
         loop {
             let dest_rank = (position.0 as i32 + direction.0 * distance) as usize;
             let dest_file = (position.1 as i32 + direction.1 * distance) as usize;
-            let dest_square = board[dest_rank][dest_file];
-            match dest_square {
+            let dest = ChessCell(dest_rank, dest_file);
+            let target = board_state.square(dest);
+            match target {
                 Square::Aether => break,
                 Square::Empty => {
-                    moves.push((position, ChessCell(dest_rank, dest_file)).into());
+                    moves.push((position, dest).into());
                     distance += 1;
                 }
                 Square::Full(_) => {
-                    if dest_square.is_enemy_of(color) {
-                        moves.push((position, ChessCell(dest_rank, dest_file)).into());
+                    if target.is_enemy_of(color) {
+                        moves.push((position, dest).into());
                     }
                     break;
                 }
@@ -151,22 +165,22 @@ pub fn rook_moves(
     position: ChessCell,
     moves: &mut Vec<ChessMove>,
 ) {
-    let board = board_state.board;
     for direction in &ROOK_DIRECTIONS {
         let mut distance = 1;
         loop {
             let dest_rank = (position.0 as i32 + direction.0 * distance) as usize;
             let dest_file = (position.1 as i32 + direction.1 * distance) as usize;
-            let dest_square = board[dest_rank][dest_file];
-            match dest_square {
+            let dest = ChessCell(dest_rank, dest_file);
+            let target = board_state.square(dest);
+            match target {
                 Square::Aether => break,
                 Square::Empty => {
-                    moves.push((position, ChessCell(dest_rank, dest_file)).into());
+                    moves.push((position, dest).into());
                     distance += 1
                 }
                 Square::Full(_) => {
-                    if dest_square.is_enemy_of(color) {
-                        moves.push((position, ChessCell(dest_rank, dest_file)).into());
+                    if target.is_enemy_of(color) {
+                        moves.push((position, dest).into());
                     }
                     break;
                 }
@@ -189,12 +203,11 @@ pub fn king_moves(
     position: ChessCell,
     moves: &mut Vec<ChessMove>,
 ) {
-    let board = board_state.board;
     let destinations = KING_RAY_ATTACKS[position.as_index()];
     for destination in destinations {
-        let cell = ChessCell::from_index(*destination);
-        if board[cell.0][cell.1].is_empty_or_enemy_of(color) {
-            moves.push((position, cell).into());
+        let target = ChessCell::from_index(*destination);
+        if board_state.square(target).is_empty_or_enemy_of(color) {
+            moves.push((position, target).into());
         }
     }
 }

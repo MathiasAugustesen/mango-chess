@@ -251,7 +251,7 @@ impl Iterator for BitBoard {
 }
 #[derive(Clone, PartialEq, Debug)]
 pub struct BoardState {
-    pub board: [[Square; 12]; 12],
+    board: [[Square; 12]; 12],
     pub to_move: PieceColor,
     // Keeps track of all the white pieces
     pub white_bitboard: BitBoard,
@@ -380,28 +380,38 @@ impl BoardState {
         };
         Ok(board_state)
     }
+    #[inline]
     pub fn swap_to_move(&mut self) {
         match self.to_move {
             White => self.to_move = Black,
             Black => self.to_move = White,
         }
     }
+    #[inline]
     pub fn clear_en_passant_square(&mut self) {
         self.en_passant_square = None;
+    }
+    #[inline]
+    pub fn square(&self, square: ChessCell) -> &Square{
+        &self.board[square.0][square.1]
+    }
+    #[inline]
+    pub fn square_mut(&mut self, square: ChessCell) -> &mut Square {
+        &mut self.board[square.0][square.1]
     }
     pub fn make_move(&mut self, mov: ChessMove) {
         let start = mov.start;
         let dest = mov.dest;
-        let piece = self.board[start.0][start.1].piece();
-        self.board[start.0][start.1] = Square::Empty;
+        let piece = self.square(start).piece();
+        *self.square_mut(start) = Square::Empty;
 
-        let attacked_square = self.board[dest.0][dest.1];
+        let attacked_square = self.square(dest);
         if attacked_square.has_piece() {
             self.last_capture = Some(attacked_square.piece());
         } else {
             self.last_capture = None;
         }
-        self.board[dest.0][dest.1] = Square::Full(piece);
+        *self.square_mut(dest) = Square::Full(piece);
 
         if piece.kind() == King {
             match piece.color() {
@@ -413,7 +423,7 @@ impl BoardState {
         self.update_bitboards(mov);
 
         self.clear_en_passant_square();
-        
+
         self.last_move = Some(mov);
 
         self.swap_to_move();
