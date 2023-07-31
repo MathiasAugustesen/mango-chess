@@ -409,8 +409,16 @@ impl BoardState {
                 Black => self.black_king_location = dest,
             }
         }
-        self.update_board_state(mov);
+
+        self.update_bitboards(mov);
+
+        self.clear_en_passant_square();
+        
+        self.last_move = Some(mov);
+
+        self.swap_to_move();
     }
+    pub fn unmake_move() {}
     fn update_bitboards(&mut self, mov: ChessMove) {
         let (current_player_bitboard, opposing_player_bitboard) = match self.to_move {
             White => (&mut self.white_bitboard, &mut self.black_bitboard),
@@ -500,13 +508,6 @@ impl BoardState {
             }
         }
         ray_attackers
-    }
-    pub fn update_board_state(&mut self, mov: ChessMove) {
-        self.update_bitboards(mov);
-        self.clear_en_passant_square();
-        self.last_move = Some(mov);
-
-        self.swap_to_move();
     }
 }
 // ChessCell represents a valid algebraic square on the board
