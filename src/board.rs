@@ -249,32 +249,47 @@ impl Iterator for BitBoard {
         Some(cell)
     }
 }
-
+#[derive(Debug, Clone, PartialEq)]
 struct EntropyStack {
     stack: Vec<MoveEntropy>,
 }
 impl EntropyStack {
-    pub fn pop(&mut self) -> Option<MoveEntropy> {
-        self.stack.pop()
+    pub fn new() -> EntropyStack {
+        EntropyStack { stack: vec![MoveEntropy::default()] }
     }
-    pub fn view(&self) -> Option<&MoveEntropy> {
-        self.stack.first()
+    pub fn pop(&mut self) -> MoveEntropy {
+        self.stack.pop().expect("Tried to unmake unexisting move")
     }
-    pub fn push(&mut self) {
-        self.stack.push(MoveEntropy::default())
+    pub fn top(&self) -> MoveEntropy {
+        *self.stack.first().unwrap()
+    }
+    pub fn top_mut(&mut self) -> &mut MoveEntropy {
+        self.stack.first_mut().unwrap()
+    }
+    pub fn last_move(&self) -> Option<ChessMove> {
+        self.top().last_move
+    }
+    pub fn last_capture(&self) -> Option<Piece> {
+        self.top().last_capture
+    }
+    pub fn set_last_move(&mut self, mov: ChessMove) {
+        self.top_mut().last_move = Some(mov);
+    }
+    pub fn set_last_capture(&mut self, captured_piece: Option<Piece>) {
+        self.top_mut().last_capture = captured_piece
+    }
+    pub fn push(&mut self, mov: ChessMove, capture: Option<Piece>) {
+        self.stack.push(MoveEntropy::new(mov, capture))
     }
 }
-#[derive(Default, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy, PartialEq)]
 struct MoveEntropy {
-    last_move: Option<ChessMove>,
-    last_capture: Option<Piece>,
+    pub last_move: Option<ChessMove>,
+    pub last_capture: Option<Piece>,
 }
 impl MoveEntropy {
-    pub fn set_last_move(&mut self, mov: ChessMove) {
-        self.last_move = Some(mov);
-    }
-    pub fn set_last_capture(&mut self, captured_piece: Piece) {
-        self.last_capture = Some(captured_piece)
+    pub fn new(mov: ChessMove, capture: Option<Piece>) -> MoveEntropy {
+        MoveEntropy { last_move: Some(mov), last_capture: capture }
     }
 }
 #[derive(Clone, PartialEq, Debug)]
@@ -287,11 +302,12 @@ pub struct BoardState {
     pub black_bitboard: BitBoard,
     pub white_king_location: ChessCell,
     pub black_king_location: ChessCell,
-    pub castling_rights: CastlingRights,
+    /*
     pub en_passant_square: Option<ChessCell>,
-    pub last_move: Option<ChessMove>,
     pub pawn_promotion: Option<ChessCell>,
-    pub last_capture: Option<Piece>,
+    pub castling_rights: CastlingRights,
+    */
+    entropy_stack: EntropyStack,
 }
 impl BoardState {
     pub fn empty_game() -> BoardState {
@@ -301,11 +317,10 @@ impl BoardState {
         let black_bitboard = BitBoard(0);
         let white_king_location = ChessCell(100, 100);
         let black_king_location = ChessCell(100, 100);
-        let castling_rights = CastlingRights::no_castling_rights();
-        let en_passant_square = None;
-        let last_move = None;
-        let pawn_promotion = None;
-        let last_capture = None;
+        let _castling_rights = CastlingRights::no_castling_rights();
+        let _en_passant_square: Option<()> = None;
+        let _pawn_promotion: Option<()> = None;
+        let entropy_stack = EntropyStack::new();
         return BoardState {
             board,
             to_move,
@@ -313,11 +328,7 @@ impl BoardState {
             black_bitboard,
             white_king_location,
             black_king_location,
-            castling_rights,
-            en_passant_square,
-            last_move,
-            pawn_promotion,
-            last_capture,
+            entropy_stack,
         };
     }
     pub fn new_game() -> BoardState {
@@ -350,11 +361,10 @@ impl BoardState {
         let black_bitboard = BLACK_STARTING_BITBOARD;
         let white_king_location = ChessCell(RANK_1, E_FILE);
         let black_king_location = ChessCell(RANK_8, E_FILE);
-        let castling_rights = CastlingRights::all_castling_rights();
-        let en_passant_square = None;
-        let last_move = None;
-        let pawn_promotion = None;
-        let last_capture = None;
+        let _castling_rights = CastlingRights::all_castling_rights();
+        let _en_passant_square: Option<()> = None;
+        let _pawn_promotion: Option<()> = None;
+        let entropy_stack = EntropyStack::new();
         BoardState {
             board,
             to_move,
@@ -362,11 +372,7 @@ impl BoardState {
             black_bitboard,
             white_king_location,
             black_king_location,
-            castling_rights,
-            en_passant_square,
-            last_move,
-            pawn_promotion,
-            last_capture,
+            entropy_stack
         }
     }
     pub fn from_fen(fen: &str) -> Result<BoardState, &str> {
@@ -380,9 +386,9 @@ impl BoardState {
         let fen_to_move = fen_parts[1];
         let to_move = fen::to_move_from_fen(fen_to_move)?;
         let fen_castling_rights = fen_parts[2];
-        let castling_rights = castling_rights_from_fen(fen_castling_rights)?;
+        let _castling_rights = castling_rights_from_fen(fen_castling_rights)?;
         let fen_en_passant_square = fen_parts[3];
-        let en_passant_square = en_passant_square_from_fen(fen_en_passant_square)?;
+        let _en_passant_square = en_passant_square_from_fen(fen_en_passant_square)?;
         let _halfmove_clock = fen_parts[4];
         let _fullmove_clock = fen_parts[5];
         if white_king_location.0 > BOARD_END
@@ -400,11 +406,7 @@ impl BoardState {
             black_bitboard,
             white_king_location,
             black_king_location,
-            castling_rights,
-            en_passant_square,
-            last_move: None,
-            pawn_promotion: None,
-            last_capture: None,
+            entropy_stack: EntropyStack::new()
         };
         Ok(board_state)
     }
@@ -417,7 +419,19 @@ impl BoardState {
     }
     #[inline]
     pub fn clear_en_passant_square(&mut self) {
-        self.en_passant_square = None;
+        //self.en_passant_square = None;
+    }
+    pub fn last_move(&self) -> Option<ChessMove> {
+        self.entropy_stack.last_move()
+    }
+    pub fn last_capture(&self) -> Option<Piece> {
+        self.entropy_stack.last_capture()
+    }
+    pub fn set_last_move(&mut self, mov: ChessMove) {
+        self.entropy_stack.set_last_move(mov)
+    }
+    pub fn set_last_capture(&mut self, captured_piece: Option<Piece>) {
+        self.entropy_stack.set_last_capture(captured_piece)
     }
     #[inline]
     pub fn square(&self, square: ChessCell) -> &Square{
@@ -435,9 +449,9 @@ impl BoardState {
 
         let attacked_square = self.square(dest);
         if attacked_square.has_piece() {
-            self.last_capture = Some(attacked_square.piece());
+            self.set_last_capture(Some(attacked_square.piece()));
         } else {
-            self.last_capture = None;
+            self.set_last_capture(None);
         }
         *self.square_mut(dest) = Square::Full(piece);
 
@@ -452,7 +466,7 @@ impl BoardState {
 
         self.clear_en_passant_square();
 
-        self.last_move = Some(mov);
+        self.set_last_move(mov);
 
         self.swap_to_move();
     }
@@ -698,19 +712,23 @@ mod tests {
             fen_board_state.black_king_location,
             new_board_state.black_king_location
         );
+        /*
         assert_eq!(
             fen_board_state.castling_rights,
             new_board_state.castling_rights
         );
+        
         assert_eq!(
             fen_board_state.en_passant_square,
             new_board_state.en_passant_square
         );
-        assert_eq!(fen_board_state.last_move, new_board_state.last_move);
         assert_eq!(
             fen_board_state.pawn_promotion,
             new_board_state.pawn_promotion
         );
+        */
+        assert_eq!(fen_board_state.entropy_stack, new_board_state.entropy_stack);
+
     }
     #[test]
     #[should_panic]

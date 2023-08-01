@@ -58,7 +58,7 @@ pub fn search(
         );
         if eval > best_eval {
             best_eval = eval;
-            best_move = mov.last_move.clone();
+            best_move = mov.last_move();
         }
         alpha = alpha.max(eval);
     }
