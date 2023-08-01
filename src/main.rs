@@ -27,6 +27,14 @@ impl From<(ChessCell, ChessCell)> for ChessMove {
         }
     }
 }
+impl ChessMove {
+    pub fn reverse(self) -> ChessMove {
+        ChessMove {
+            start: self.dest,
+            dest: self.start
+        }
+    }
+}
 fn main() {
     let mut board_state = BoardState::new_game();
     let mut total_nodes_evaluated = 0;

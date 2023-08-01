@@ -6,6 +6,7 @@ use crate::move_generation::generate_pseudo_moves_for_piece;
 use crate::ray_attacks::*;
 use crate::ChessMove;
 use std::str::FromStr;
+use std::thread::current;
 use PieceColor::*;
 use PieceKind::*;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -261,10 +262,10 @@ impl EntropyStack {
         self.stack.pop().expect("Tried to unmake unexisting move")
     }
     pub fn top(&self) -> MoveEntropy {
-        *self.stack.first().unwrap()
+        *self.stack.last().unwrap()
     }
     pub fn top_mut(&mut self) -> &mut MoveEntropy {
-        self.stack.first_mut().unwrap()
+        self.stack.last_mut().unwrap()
     }
     pub fn last_move(&self) -> Option<ChessMove> {
         self.top().last_move
@@ -442,6 +443,7 @@ impl BoardState {
         &mut self.board[square.0][square.1]
     }
     pub fn make_move(&mut self, mov: ChessMove) {
+        self.entropy_stack.push(mov, None);
         let start = mov.start;
         let dest = mov.dest;
         let piece = self.square(start).piece();
@@ -464,13 +466,30 @@ impl BoardState {
 
         self.update_bitboards(mov);
 
-        self.clear_en_passant_square();
-
-        self.set_last_move(mov);
-
         self.swap_to_move();
+        dbg!(&self.entropy_stack);
     }
-    pub fn unmake_move() {}
+    pub fn unmake_move(&mut self) {
+        self.swap_to_move();
+        let reverse_move = self.last_move().unwrap().reverse();
+        let start = reverse_move.start;
+        let dest = reverse_move.dest;
+        let moving_piece = self.square(start).piece();
+        *self.square_mut(start) = Square::Empty;
+        *self.square_mut(dest) = Square::Full(moving_piece);
+        self.downgrade_bitboards(reverse_move, self.last_capture());
+
+        if let Some(captured_piece) = self.last_capture() {
+            *self.square_mut(reverse_move.start) = Square::Full(captured_piece);
+        }
+        if moving_piece.kind() == King {
+            match moving_piece.color() {
+                White => self.white_king_location = dest,
+                Black => self.black_king_location = dest,
+            }
+        }
+        self.entropy_stack.pop();
+    }
     fn update_bitboards(&mut self, mov: ChessMove) {
         let (current_player_bitboard, opposing_player_bitboard) = match self.to_move {
             White => (&mut self.white_bitboard, &mut self.black_bitboard),
@@ -481,6 +500,18 @@ impl BoardState {
         current_player_bitboard.add_piece(mov.dest.as_index());
 
         opposing_player_bitboard.remove_piece(mov.dest.as_index());
+    }
+    pub fn downgrade_bitboards(&mut self, mov: ChessMove, last_capture: Option<Piece>) {
+        let (current_player_bitboard, opposing_player_bitboard) = match self.to_move {
+            White => (&mut self.white_bitboard, &mut self.black_bitboard),
+            Black => (&mut self.black_bitboard, &mut self.white_bitboard),
+        };
+        current_player_bitboard.remove_piece(mov.start.as_index());
+        current_player_bitboard.add_piece(mov.dest.as_index());
+        
+        if last_capture.is_some() {
+            opposing_player_bitboard.add_piece(mov.start.as_index());
+        }
     }
     pub fn get_piece_positions(&self, color: PieceColor) -> Vec<ChessCell> {
         let mut piece_positions = Vec::new();
@@ -817,5 +848,16 @@ mod tests {
         assert_eq!(white_king_square.is_empty_or_enemy_of(White), false);
         let c6 = board[RANK_6][C_FILE];
         assert_eq!(c6.is_empty_or_enemy_of(White), true);
+    }
+    #[test]
+    fn unmake_move_restores_board_state() {
+        let mut board_state = BoardState::new_game();
+        let mov = ChessMove {
+            start: ChessCell(RANK_2, E_FILE),
+            dest: ChessCell(RANK_4, E_FILE)
+        };
+        board_state.make_move(mov);
+        board_state.unmake_move();
+        assert_eq!(board_state, BoardState::new_game())
     }
 }
