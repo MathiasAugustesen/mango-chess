@@ -1,10 +1,10 @@
-use crate::ChessMove;
 use crate::constants::*;
 use crate::fen;
 use crate::fen::castling_rights_from_fen;
 use crate::fen::en_passant_square_from_fen;
 use crate::move_generation::generate_pseudo_moves_for_piece;
 use crate::ray_attacks::*;
+use crate::ChessMove;
 use std::str::FromStr;
 use PieceColor::*;
 use PieceKind::*;
@@ -247,6 +247,34 @@ impl Iterator for BitBoard {
         let cell = ChessCell::from_index(position);
         self.0 ^= 1 << position;
         Some(cell)
+    }
+}
+
+struct EntropyStack {
+    stack: Vec<MoveEntropy>,
+}
+impl EntropyStack {
+    pub fn pop(&mut self) -> Option<MoveEntropy> {
+        self.stack.pop()
+    }
+    pub fn view(&self) -> Option<&MoveEntropy> {
+        self.stack.first()
+    }
+    pub fn push(&mut self) {
+        self.stack.push(MoveEntropy::default())
+    }
+}
+#[derive(Default, Clone, Copy)]
+struct MoveEntropy {
+    last_move: Option<ChessMove>,
+    last_capture: Option<Piece>,
+}
+impl MoveEntropy {
+    pub fn set_last_move(&mut self, mov: ChessMove) {
+        self.last_move = Some(mov);
+    }
+    pub fn set_last_capture(&mut self, captured_piece: Piece) {
+        self.last_capture = Some(captured_piece)
     }
 }
 #[derive(Clone, PartialEq, Debug)]
@@ -676,8 +704,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn create_board_from_fen_with_invalid_length_panics() {
-        BoardState::from_fen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR KQkq e3 0 1")
-                .unwrap();
+        BoardState::from_fen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR KQkq e3 0 1").unwrap();
     }
     #[test]
     fn get_bitboards_returns_the_right_bitboards() {
