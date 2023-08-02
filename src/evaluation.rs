@@ -1,29 +1,32 @@
 use crate::board::BoardState;
 use crate::board::Piece;
+use crate::board::PieceColor;
 use crate::board::PieceColor::*;
 pub fn evaluate(board_state: &BoardState) -> i32 {
     let mut evaluation: i32 = 0;
-    // add white evaluation
-    evaluation += board_state
-        .get_piece_positions(White)
+    evaluation += get_player_eval(board_state, White);
+    evaluation -= get_player_eval(board_state, Black);
+    evaluation * board_state.to_move.relative_value()
+}
+fn get_player_eval(board_state: &BoardState, color: PieceColor) -> i32 {
+    board_state
+        .get_piece_positions(color)
         .into_iter()
         .map(|pos| {
             evaluate_piece(
                 board_state.board.square(pos).piece().unwrap(),
-                63 - pos.as_index(),
+                pos.as_index(),
             )
         })
-        .sum::<i32>();
-    // subtract black evaluation
-    evaluation -= board_state
-        .get_piece_positions(Black)
-        .into_iter()
-        .map(|pos| evaluate_piece(board_state.board.square(pos).piece().unwrap(), pos.as_index()))
-        .sum::<i32>();
-    evaluation * board_state.to_move.relative_value()
+        .sum::<i32>()
 }
-fn evaluate_piece(piece: Piece, pos: usize) -> i32 {
-    PIECE_VALUES[piece.index()] + POSITION_VALUES[piece.index()][pos]
+
+pub fn evaluate_piece(piece: Piece, pos: usize) -> i32 {
+    let position_values_index = match piece.color() {
+        White => 63 - pos,
+        Black => pos,
+    };
+    PIECE_VALUES[piece.index()] + POSITION_VALUES[piece.index()][position_values_index]
 }
 pub fn evaluate_game_end() -> i32 {
     0

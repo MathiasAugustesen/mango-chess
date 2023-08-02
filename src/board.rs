@@ -1,4 +1,6 @@
 use crate::constants::*;
+use crate::evaluation::evaluate;
+use crate::evaluation::evaluate_piece;
 use crate::fen;
 use crate::fen::castling_rights_from_fen;
 use crate::fen::en_passant_square_from_fen;
@@ -270,6 +272,9 @@ impl EntropyStack {
     pub fn last_capture(&self) -> Option<Piece> {
         self.top().last_capture
     }
+    pub fn eval(&self) -> i32 {
+        self.top().eval
+    }
     pub fn set_last_move(&mut self, mov: ChessMove) {
         self.top_mut().last_move = Some(mov);
     }
@@ -277,19 +282,21 @@ impl EntropyStack {
         self.top_mut().last_capture = captured_piece
     }
     pub fn push(&mut self, mov: ChessMove, capture: Option<Piece>) {
-        self.stack.push(MoveEntropy::new(mov, capture))
+        self.stack.push(MoveEntropy::new(mov, capture, self.eval()))
     }
 }
 #[derive(Default, Debug, Clone, Copy, PartialEq)]
 struct MoveEntropy {
     pub last_move: Option<ChessMove>,
     pub last_capture: Option<Piece>,
+    pub eval: i32
 }
 impl MoveEntropy {
-    pub fn new(mov: ChessMove, capture: Option<Piece>) -> MoveEntropy {
+    pub fn new(mov: ChessMove, capture: Option<Piece>, eval: i32) -> MoveEntropy {
         MoveEntropy {
             last_move: Some(mov),
             last_capture: capture,
+            eval
         }
     }
 }
@@ -393,7 +400,8 @@ impl BoardState {
         let _en_passant_square: Option<()> = None;
         let _pawn_promotion: Option<()> = None;
         let entropy_stack = EntropyStack::new();
-        BoardState {
+
+        let mut board_state = BoardState {
             board,
             to_move,
             white_bitboard,
@@ -401,7 +409,10 @@ impl BoardState {
             white_king_location,
             black_king_location,
             entropy_stack,
-        }
+        };
+        board_state.set_eval(evaluate(&board_state));
+        board_state
+        
     }
     pub fn from_fen(fen: &str) -> Result<BoardState, &str> {
         let fen_parts: Vec<&str> = fen.split_ascii_whitespace().collect();
@@ -427,7 +438,7 @@ impl BoardState {
             return Err("Failed to parse FEN string: Both kings were not on the board");
         }
         let (white_bitboard, black_bitboard) = get_bitboards(&board);
-        let board_state = BoardState {
+        let mut board_state = BoardState {
             board,
             to_move,
             white_bitboard,
@@ -436,6 +447,7 @@ impl BoardState {
             black_king_location,
             entropy_stack: EntropyStack::new(),
         };
+        board_state.set_eval(evaluate(&board_state));
         Ok(board_state)
     }
     #[inline]
@@ -458,6 +470,10 @@ impl BoardState {
         self.entropy_stack.last_capture()
     }
     #[inline]
+    pub fn eval(&self) -> i32 {
+        self.entropy_stack.eval() * self.to_move.relative_value()
+    }
+    #[inline]
     pub fn set_last_move(&mut self, mov: ChessMove) {
         self.entropy_stack.set_last_move(mov)
     }
@@ -465,16 +481,32 @@ impl BoardState {
     pub fn set_last_capture(&mut self, captured_piece: Option<Piece>) {
         self.entropy_stack.set_last_capture(captured_piece)
     }
+    pub fn set_eval(&mut self, eval: i32) {
+        self.entropy_stack.top_mut().eval = eval
+    }
+    pub fn increment_eval(&mut self, eval_increment: i32) {
+        self.entropy_stack.top_mut().eval += eval_increment * self.to_move.relative_value()
+    }
     pub fn make_move(&mut self, mov: ChessMove) {
         let start = mov.start;
         let dest = mov.dest;
+        let mut eval_increment = 0;
+
         let moving_piece = self.board.square(start).piece().unwrap();
+
         *self.board.square_mut(start) = Square::Empty;
+        eval_increment -= evaluate_piece(moving_piece, start.as_index());
 
         let attacked_square = self.board.square(dest);
         self.entropy_stack.push(mov, attacked_square.piece());
+        if let Some(attacked_piece) = attacked_square.piece() {
+            eval_increment += evaluate_piece(attacked_piece, dest.as_index());
+        }
 
         *self.board.square_mut(dest) = Square::Full(moving_piece);
+        eval_increment += evaluate_piece(moving_piece, dest.as_index());
+
+        self.increment_eval(eval_increment);
 
         if moving_piece.kind() == King {
             match moving_piece.color() {
@@ -493,7 +525,10 @@ impl BoardState {
         let start = reverse_move.start;
         let dest = reverse_move.dest;
         let moving_piece = self.board.square(start).piece().unwrap();
+
         *self.board.square_mut(start) = Square::Empty;
+
+
         *self.board.square_mut(dest) = Square::Full(moving_piece);
         self.downgrade_bitboards(reverse_move, self.last_capture());
 

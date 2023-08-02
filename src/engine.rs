@@ -11,7 +11,7 @@ pub fn negamax(
 ) -> i32 {
     if depth == 0 {
         *counter += 1;
-        return evaluation::evaluate(&board_state);
+        return board_state.eval()
     }
     let mut best_eval = -i32::MAX;
     let available_moves = generate_moves(board_state);
