@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use crate::board::empty_board;
+use crate::board::ChessBoard;
 use crate::board::CastlingRights;
 use crate::board::ChessCell;
 use crate::board::Piece;
@@ -8,8 +8,8 @@ use crate::board::PieceColor;
 use crate::board::PieceColor::{Black, White};
 use crate::board::Square;
 use crate::constants::*;
-pub fn board_from_fen(fen_board: &str) -> Result<[[Square; 12]; 12], &str> {
-    let mut board = empty_board();
+pub fn board_from_fen(fen_board: &str) -> Result<ChessBoard, &str> {
+    let mut board = ChessBoard::empty();
     let fen_ranks: Vec<&str> = fen_board.split("/").collect();
 
     if fen_ranks.len() != 8 {
@@ -31,7 +31,7 @@ pub fn board_from_fen(fen_board: &str) -> Result<[[Square; 12]; 12], &str> {
                     return Err("Failed to parse FEN string: Character was not a chess piece");
                 }
                 let piece = piece.unwrap();
-                board[board_rank][board_file] = Square::Full(piece);
+                *board.square_mut(ChessCell(board_rank, board_file)) = Square::Full(piece);
                 board_file += 1;
             }
         }

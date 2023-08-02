@@ -294,8 +294,58 @@ impl MoveEntropy {
     }
 }
 #[derive(Clone, PartialEq, Debug)]
+pub struct ChessBoard([Square; 144]);
+impl ChessBoard {
+    #[inline]
+    pub fn square(&self, square: ChessCell) -> &Square {
+        &self.0[square.0 * 12 + square.1]
+    }
+    #[inline]
+    pub fn square_mut(&mut self, square: ChessCell) -> &mut Square {
+        &mut self.0[square.0 * 12 + square.1]
+    }
+    pub fn empty() -> ChessBoard {
+        let mut chess_board = ChessBoard([Square::Aether; 144]);
+        for rank in RANK_1..=RANK_8 {
+            for file in A_FILE..=H_FILE {
+                *chess_board.square_mut(ChessCell(rank, file)) = Square::Empty;
+            }
+        }
+        chess_board
+    }
+    pub fn new() -> ChessBoard {
+        let mut chess_board = ChessBoard::empty();
+        // Arrange pawns for both sides
+        for file in A_FILE..=H_FILE {
+            *chess_board.square_mut(ChessCell(RANK_2, file)) = Piece::pawn(White).into();
+            *chess_board.square_mut(ChessCell(RANK_7, file)) = Piece::pawn(Black).into();
+        }
+        // Arrange white pieces
+        *chess_board.square_mut(ChessCell(RANK_1, A_FILE)) = Piece::rook(White).into();
+        *chess_board.square_mut(ChessCell(RANK_1, B_FILE)) = Piece::knight(White).into();
+        *chess_board.square_mut(ChessCell(RANK_1, C_FILE)) = Piece::bishop(White).into();
+        *chess_board.square_mut(ChessCell(RANK_1, D_FILE)) = Piece::queen(White).into();
+        *chess_board.square_mut(ChessCell(RANK_1, E_FILE)) = Piece::king(White).into();
+        *chess_board.square_mut(ChessCell(RANK_1, F_FILE)) = Piece::bishop(White).into();
+        *chess_board.square_mut(ChessCell(RANK_1, G_FILE)) = Piece::knight(White).into();
+        *chess_board.square_mut(ChessCell(RANK_1, H_FILE)) = Piece::rook(White).into();
+        // Arrange black pieces
+        *chess_board.square_mut(ChessCell(RANK_8, A_FILE)) = Piece::rook(Black).into();
+        *chess_board.square_mut(ChessCell(RANK_8, B_FILE)) = Piece::knight(Black).into();
+        *chess_board.square_mut(ChessCell(RANK_8, C_FILE)) = Piece::bishop(Black).into();
+        *chess_board.square_mut(ChessCell(RANK_8, D_FILE)) = Piece::queen(Black).into();
+        *chess_board.square_mut(ChessCell(RANK_8, E_FILE)) = Piece::king(Black).into();
+        *chess_board.square_mut(ChessCell(RANK_8, F_FILE)) = Piece::bishop(Black).into();
+        *chess_board.square_mut(ChessCell(RANK_8, G_FILE)) = Piece::knight(Black).into();
+        *chess_board.square_mut(ChessCell(RANK_8, H_FILE)) = Piece::rook(Black).into();
+        chess_board
+    }
+
+}
+
+#[derive(Clone, PartialEq, Debug)]
 pub struct BoardState {
-    board: [[Square; 12]; 12],
+    pub board: ChessBoard,
     pub to_move: PieceColor,
     // Keeps track of all the white pieces
     pub white_bitboard: BitBoard,
@@ -312,7 +362,7 @@ pub struct BoardState {
 }
 impl BoardState {
     pub fn empty_game() -> BoardState {
-        let board = empty_board();
+        let board = ChessBoard::empty();
         let to_move = White;
         let white_bitboard = BitBoard(0);
         let black_bitboard = BitBoard(0);
@@ -333,30 +383,7 @@ impl BoardState {
         };
     }
     pub fn new_game() -> BoardState {
-        let mut board = empty_board();
-        // Arrange pawns for both sides
-        for file in A_FILE..=H_FILE {
-            board[RANK_2][file] = Piece::pawn(White).into();
-            board[RANK_7][file] = Piece::pawn(Black).into();
-        }
-        // Arrange white pieces
-        board[RANK_1][A_FILE] = Piece::rook(White).into();
-        board[RANK_1][B_FILE] = Piece::knight(White).into();
-        board[RANK_1][C_FILE] = Piece::bishop(White).into();
-        board[RANK_1][D_FILE] = Piece::queen(White).into();
-        board[RANK_1][E_FILE] = Piece::king(White).into();
-        board[RANK_1][F_FILE] = Piece::bishop(White).into();
-        board[RANK_1][G_FILE] = Piece::knight(White).into();
-        board[RANK_1][H_FILE] = Piece::rook(White).into();
-        // Arrange black pieces
-        board[RANK_8][A_FILE] = Piece::rook(Black).into();
-        board[RANK_8][B_FILE] = Piece::knight(Black).into();
-        board[RANK_8][C_FILE] = Piece::bishop(Black).into();
-        board[RANK_8][D_FILE] = Piece::queen(Black).into();
-        board[RANK_8][E_FILE] = Piece::king(Black).into();
-        board[RANK_8][F_FILE] = Piece::bishop(Black).into();
-        board[RANK_8][G_FILE] = Piece::knight(Black).into();
-        board[RANK_8][H_FILE] = Piece::rook(Black).into();
+        let board = ChessBoard::new();
         let to_move = White;
         let white_bitboard = WHITE_STARTING_BITBOARD;
         let black_bitboard = BLACK_STARTING_BITBOARD;
@@ -422,36 +449,32 @@ impl BoardState {
     pub fn clear_en_passant_square(&mut self) {
         //self.en_passant_square = None;
     }
+    #[inline]
     pub fn last_move(&self) -> Option<ChessMove> {
         self.entropy_stack.last_move()
     }
+    #[inline]
     pub fn last_capture(&self) -> Option<Piece> {
         self.entropy_stack.last_capture()
     }
+    #[inline]
     pub fn set_last_move(&mut self, mov: ChessMove) {
         self.entropy_stack.set_last_move(mov)
     }
+    #[inline]
     pub fn set_last_capture(&mut self, captured_piece: Option<Piece>) {
         self.entropy_stack.set_last_capture(captured_piece)
-    }
-    #[inline]
-    pub fn square(&self, square: ChessCell) -> &Square {
-        &self.board[square.0][square.1]
-    }
-    #[inline]
-    pub fn square_mut(&mut self, square: ChessCell) -> &mut Square {
-        &mut self.board[square.0][square.1]
     }
     pub fn make_move(&mut self, mov: ChessMove) {
         let start = mov.start;
         let dest = mov.dest;
-        let moving_piece = self.square(start).piece().unwrap();
-        *self.square_mut(start) = Square::Empty;
+        let moving_piece = self.board.square(start).piece().unwrap();
+        *self.board.square_mut(start) = Square::Empty;
 
-        let attacked_square = self.square(dest);
+        let attacked_square = self.board.square(dest);
         self.entropy_stack.push(mov, attacked_square.piece());
 
-        *self.square_mut(dest) = Square::Full(moving_piece);
+        *self.board.square_mut(dest) = Square::Full(moving_piece);
 
         if moving_piece.kind() == King {
             match moving_piece.color() {
@@ -469,13 +492,13 @@ impl BoardState {
         let reverse_move = self.last_move().unwrap().reverse();
         let start = reverse_move.start;
         let dest = reverse_move.dest;
-        let moving_piece = self.square(start).piece().unwrap();
-        *self.square_mut(start) = Square::Empty;
-        *self.square_mut(dest) = Square::Full(moving_piece);
+        let moving_piece = self.board.square(start).piece().unwrap();
+        *self.board.square_mut(start) = Square::Empty;
+        *self.board.square_mut(dest) = Square::Full(moving_piece);
         self.downgrade_bitboards(reverse_move, self.last_capture());
 
         if let Some(captured_piece) = self.last_capture() {
-            *self.square_mut(reverse_move.start) = Square::Full(captured_piece);
+            *self.board.square_mut(reverse_move.start) = Square::Full(captured_piece);
         }
         if moving_piece.kind() == King {
             match moving_piece.color() {
@@ -560,7 +583,6 @@ impl BoardState {
         true
     }
     // This function will search a lookup table and check if the given piece location is in an x-ray attack by the specified color.
-    // Currently used for seeing if the king is in check, but works for any square on the board.
     pub fn ray_attackers(
         &self,
         target_square: ChessCell,
@@ -570,7 +592,7 @@ impl BoardState {
         let mut ray_attackers: Vec<(Piece, ChessCell)> = Vec::new();
         for attacker in self.get_piece_positions(color) {
             let attacker_idx = attacker.as_index();
-            let attacking_square = self.board[attacker.0][attacker.1];
+            let attacking_square = self.board.square(attacker);
             let attacking_piece = attacking_square.piece().unwrap();
             let attacked_squares = match (attacking_piece.color(), attacking_piece.kind()) {
                 (White, Pawn) => WHITE_PAWN_RAY_ATTACKS[attacker_idx],
@@ -609,6 +631,9 @@ impl ChessCell {
         let rank = index / 8 + BOARD_START;
         let file = index % 8 + BOARD_START;
         ChessCell(rank, file)
+    }
+    pub fn is_aether(self) -> bool {
+        self.0 <= 1 || self.0 >= 10 || self.1 <= 1 || self.1 >= 10
     }
 }
 impl FromStr for ChessCell {
@@ -656,23 +681,14 @@ impl std::fmt::Display for ChessCell {
         write!(f, "{}{}", file, rank)
     }
 }
-pub fn empty_board() -> [[Square; 12]; 12] {
-    let mut board = [[Square::Aether; 12]; 12];
-    for rank in RANK_1..=RANK_8 {
-        for file in A_FILE..=H_FILE {
-            board[rank][file] = Square::Empty;
-        }
-    }
-    board
-}
 // Returns (white_bitboard, black_bitboard)
-pub fn get_bitboards(board: &[[Square; 12]; 12]) -> (BitBoard, BitBoard) {
+pub fn get_bitboards(board: &ChessBoard) -> (BitBoard, BitBoard) {
     let mut white_bitboard: u64 = 0;
     let mut black_bitboard: u64 = 0;
     let mut position: u64 = 0;
     for rank in BOARD_START..=BOARD_END {
         for file in BOARD_START..=BOARD_END {
-            if let Square::Full(piece) = board[rank][file] {
+            if let Square::Full(piece) = board.square(ChessCell(rank, file)) {
                 match piece.color {
                     White => white_bitboard |= 1 << position,
                     Black => black_bitboard |= 1 << position,
@@ -684,12 +700,12 @@ pub fn get_bitboards(board: &[[Square; 12]; 12]) -> (BitBoard, BitBoard) {
     (BitBoard(white_bitboard), BitBoard(black_bitboard))
 }
 // Returns (white_king_location, black_king_location)
-fn find_kings(board: &[[Square; 12]; 12]) -> Result<(ChessCell, ChessCell), &'static str> {
+fn find_kings(board: &ChessBoard) -> Result<(ChessCell, ChessCell), &'static str> {
     let mut white_king_location: Option<ChessCell> = None;
     let mut black_king_location: Option<ChessCell> = None;
     for rank in RANK_1..=RANK_8 {
         for file in A_FILE..=H_FILE {
-            let square = board[rank][file];
+            let square = board.square(ChessCell(rank, file));
             if let Square::Full(piece) = square {
                 if piece.kind() == King {
                     match piece.color() {
@@ -837,10 +853,10 @@ mod tests {
     fn is_empty_or_enemy_of_works() {
         let board_state = BoardState::new_game();
         let board = board_state.board;
-        let white_king_square = board[RANK_1][E_FILE];
+        let white_king_square = board.square(ChessCell(RANK_1, E_FILE));
         assert_eq!(white_king_square.is_empty_or_enemy_of(Black), true);
         assert_eq!(white_king_square.is_empty_or_enemy_of(White), false);
-        let c6 = board[RANK_6][C_FILE];
+        let c6 = board.square(ChessCell(RANK_6, C_FILE));
         assert_eq!(c6.is_empty_or_enemy_of(White), true);
     }
     #[test]
