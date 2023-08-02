@@ -2,26 +2,30 @@ use crate::board::BoardState;
 use crate::board::Piece;
 use crate::board::PieceColor::*;
 pub fn evaluate(board_state: &BoardState) -> i32 {
-    let board = board_state.board;
     let mut evaluation: i32 = 0;
     // add white evaluation
     evaluation += board_state
         .get_piece_positions(White)
         .into_iter()
-        .map(|pos| evaluate_piece(board[pos.0][pos.1].piece(), 63 - pos.as_index()))
+        .map(|pos| {
+            evaluate_piece(
+                board_state.square(pos).piece().unwrap(),
+                63 - pos.as_index(),
+            )
+        })
         .sum::<i32>();
     // subtract black evaluation
     evaluation -= board_state
         .get_piece_positions(Black)
         .into_iter()
-        .map(|pos| evaluate_piece(board[pos.0][pos.1].piece(), pos.as_index()))
+        .map(|pos| evaluate_piece(board_state.square(pos).piece().unwrap(), pos.as_index()))
         .sum::<i32>();
     evaluation * board_state.to_move.relative_value()
 }
 fn evaluate_piece(piece: Piece, pos: usize) -> i32 {
     PIECE_VALUES[piece.index()] + POSITION_VALUES[piece.index()][pos]
 }
-pub fn evaluate_game_end(board_state: &BoardState) -> i32 {
+pub fn evaluate_game_end() -> i32 {
     0
 }
 const PIECE_VALUES: [i32; 6] = [100, 300, 325, 500, 900, 10000];

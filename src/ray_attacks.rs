@@ -1,3 +1,4 @@
+use crate::ChessMove;
 use crate::board::empty_board;
 use crate::board::BoardState;
 use crate::board::PieceColor::*;
@@ -10,7 +11,7 @@ pub fn _generate_big_piece_ray_attacks(kind: PieceKind) -> Vec<Vec<usize>> {
     let color = White;
     for rank in RANK_1..=RANK_8 {
         for file in A_FILE..=H_FILE {
-            let mut moves: Vec<(ChessCell, ChessCell)> = Vec::new();
+            let mut moves: Vec<ChessMove> = Vec::new();
             let position = ChessCell(rank, file);
             match kind {
                 Pawn => panic!("Pawn ray attack table must be created manually"),
@@ -22,7 +23,7 @@ pub fn _generate_big_piece_ray_attacks(kind: PieceKind) -> Vec<Vec<usize>> {
             }
             let filtered_attacked_squares: Vec<usize> = moves
                 .iter()
-                .map(|destination| destination.1.as_index())
+                .map(|mov| mov.dest.as_index())
                 .collect();
             ray_attack_lookup.push(filtered_attacked_squares);
         }
