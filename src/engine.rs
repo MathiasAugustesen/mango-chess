@@ -2,7 +2,7 @@ use crate::board::BoardState;
 use crate::{evaluation, ChessMove};
 use crate::move_generation::generate_moves;
 pub fn negamax(
-    board_state: &BoardState,
+    board_state: &mut BoardState,
     depth: u8,
     alpha: i32,
     beta: i32,
@@ -14,10 +14,12 @@ pub fn negamax(
         return evaluation::evaluate(&board_state);
     }
     let mut best_eval = -i32::MAX;
-    let generated_moves = generate_moves(&board_state);
+    let available_moves = generate_moves(board_state);
     //generated_moves.sort_unstable_by_key(evaluation::evaluate);
-    for position in generated_moves {
-        let eval = -negamax(&position, depth - 1, -beta, -alpha, counter, prunes);
+    for mov in available_moves {
+        board_state.make_move(mov);
+        let eval = -negamax(board_state, depth - 1, -beta, -alpha, counter, prunes);
+        board_state.unmake_move();
         let alpha = alpha.max(eval);
         best_eval = eval.max(best_eval);
         if alpha >= beta {
@@ -29,7 +31,7 @@ pub fn negamax(
 }
 
 pub fn search(
-    board_state: &BoardState,
+    board_state: &mut BoardState,
     depth: u8,
 ) -> (i32, Option<ChessMove>, i32, i32) {
     let mut alpha = -i32::MAX;
@@ -48,18 +50,21 @@ pub fn search(
         );
     }
     for mov in possible_moves {
+        board_state.make_move(mov);
         let eval = -negamax(
-            &mov,
+            board_state,
             depth - 1,
             -beta,
             -alpha,
             &mut nodes_evaluated,
             &mut prunes,
         );
+
         if eval > best_eval {
             best_eval = eval;
-            best_move = mov.last_move();
+            best_move = board_state.last_move();
         }
+        board_state.unmake_move();
         alpha = alpha.max(eval);
     }
     println!(

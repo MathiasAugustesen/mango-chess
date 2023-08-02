@@ -11,8 +11,8 @@ use crate::ray_attacks::KING_RAY_ATTACKS;
 use crate::ray_attacks::KNIGHT_RAY_ATTACKS;
 const BISHOP_DIRECTIONS: [(i32, i32); 4] = [(-1, -1), (-1, 1), (1, -1), (1, 1)];
 const ROOK_DIRECTIONS: [(i32, i32); 4] = [(-1, 0), (0, -1), (0, 1), (1, 0)];
-pub fn generate_moves(board_state: &BoardState) -> Vec<BoardState> {
-    let mut new_moves: Vec<BoardState> = Vec::with_capacity(16);
+pub fn generate_moves(board_state: &mut BoardState) -> Vec<ChessMove> {
+    let mut valid_moves: Vec<ChessMove> = Vec::with_capacity(16);
     let mut potential_moves: Vec<ChessMove> = Vec::with_capacity(16);
     let player_to_move = board_state.to_move;
     let piece_positions = board_state.get_piece_positions(player_to_move);
@@ -23,13 +23,13 @@ pub fn generate_moves(board_state: &BoardState) -> Vec<BoardState> {
         }
     }
     for mov in potential_moves {
-        let mut new_board = board_state.clone();
-        new_board.make_move(mov);
-        if new_board.is_valid_move() {
-            new_moves.push(new_board);
+        board_state.make_move(mov);
+        if board_state.is_valid_move() {
+            valid_moves.push(mov);
         }
+        board_state.unmake_move();
     }
-    new_moves
+    valid_moves
 }
 pub fn generate_pseudo_moves_for_piece(
     piece: Piece,
@@ -219,16 +219,16 @@ mod tests {
 
     #[test]
     fn generate_moves_from_starting_position() {
-        let board_state = BoardState::new_game();
-        let legal_moves = generate_moves(&board_state);
+        let mut board_state = BoardState::new_game();
+        let legal_moves = generate_moves(&mut board_state);
         assert_eq!(legal_moves.len(), 20);
     }
     #[test]
     fn generate_moves_from_bongcloud() {
-        let board_state =
+        let mut board_state =
             BoardState::from_fen("rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPPKPPP/RNBQ1BNR b kq - 1 2")
                 .unwrap();
-        let legal_moves = generate_moves(&board_state);
+        let legal_moves = generate_moves(&mut board_state);
         assert_eq!(legal_moves.len(), 29);
     }
 }

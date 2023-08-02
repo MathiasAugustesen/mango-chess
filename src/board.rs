@@ -463,7 +463,6 @@ impl BoardState {
         self.update_bitboards(mov);
 
         self.swap_to_move();
-        dbg!(&self.entropy_stack);
     }
     pub fn unmake_move(&mut self) {
         self.swap_to_move();
