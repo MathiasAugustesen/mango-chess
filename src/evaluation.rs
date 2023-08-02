@@ -7,13 +7,18 @@ pub fn evaluate(board_state: &BoardState) -> i32 {
     evaluation += board_state
         .get_piece_positions(White)
         .into_iter()
-        .map(|pos| evaluate_piece(board_state.square(pos).piece(), 63 - pos.as_index()))
+        .map(|pos| {
+            evaluate_piece(
+                board_state.square(pos).piece().unwrap(),
+                63 - pos.as_index(),
+            )
+        })
         .sum::<i32>();
     // subtract black evaluation
     evaluation -= board_state
         .get_piece_positions(Black)
         .into_iter()
-        .map(|pos| evaluate_piece(board_state.square(pos).piece(), pos.as_index()))
+        .map(|pos| evaluate_piece(board_state.square(pos).piece().unwrap(), pos.as_index()))
         .sum::<i32>();
     evaluation * board_state.to_move.relative_value()
 }
