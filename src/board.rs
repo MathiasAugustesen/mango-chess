@@ -845,7 +845,7 @@ mod tests {
         assert_eq!(c6.is_empty_or_enemy_of(White), true);
     }
     #[test]
-    fn unmake_move_restores_board_state() {
+    fn make_unmake_on_new_board_restores_board_state() {
         let mut board_state = BoardState::new_game();
         let mov = ChessMove {
             start: ChessCell(RANK_2, E_FILE),
@@ -854,5 +854,22 @@ mod tests {
         board_state.make_move(mov);
         board_state.unmake_move();
         assert_eq!(board_state, BoardState::new_game())
+    }
+    #[test]
+    fn make_unmake_on_board_with_capture_restores_board_state() {
+        let mut board_state =
+            BoardState::from_fen("rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2")
+                .unwrap();
+        let mov = ChessMove {
+            start: ChessCell(RANK_4, E_FILE),
+            dest: ChessCell(RANK_5, D_FILE),
+        };
+        board_state.make_move(mov);
+        board_state.unmake_move();
+        assert_eq!(
+            board_state,
+            BoardState::from_fen("rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2")
+                .unwrap()
+        )
     }
 }
