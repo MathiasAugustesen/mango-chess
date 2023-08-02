@@ -560,7 +560,6 @@ impl BoardState {
         true
     }
     // This function will search a lookup table and check if the given piece location is in an x-ray attack by the specified color.
-    // Currently used for seeing if the king is in check, but works for any square on the board.
     pub fn ray_attackers(
         &self,
         target_square: ChessCell,
