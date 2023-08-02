@@ -1,5 +1,4 @@
 use crate::ChessMove;
-use crate::board::empty_board;
 use crate::board::BoardState;
 use crate::board::PieceColor::*;
 use crate::board::{PieceKind, PieceKind::*};
@@ -31,7 +30,6 @@ pub fn _generate_big_piece_ray_attacks(kind: PieceKind) -> Vec<Vec<usize>> {
     ray_attack_lookup
 }
 pub fn _generate_white_pawn_ray_attacks() -> Vec<Vec<usize>> {
-    let board = empty_board();
     let mut ray_attack_lookup: Vec<Vec<usize>> = Vec::new();
     for rank in RANK_1..=RANK_8 {
         for file in A_FILE..=H_FILE {
@@ -40,7 +38,7 @@ pub fn _generate_white_pawn_ray_attacks() -> Vec<Vec<usize>> {
             attacked_squares.push(ChessCell(rank + 1, file + 1));
             let filtered_attacked_squares: Vec<usize> = attacked_squares
                 .iter()
-                .filter(|square| !board[square.0][square.1].is_aether())
+                .filter(|&&square| !square.is_aether())
                 .map(|square| square.as_index())
                 .collect();
             ray_attack_lookup.push(filtered_attacked_squares)
@@ -49,7 +47,6 @@ pub fn _generate_white_pawn_ray_attacks() -> Vec<Vec<usize>> {
     ray_attack_lookup
 }
 pub fn _generate_black_pawn_ray_attacks() -> Vec<Vec<usize>> {
-    let board = empty_board();
     let mut ray_attack_lookup: Vec<Vec<usize>> = Vec::new();
     for rank in RANK_1..=RANK_8 {
         for file in A_FILE..=H_FILE {
@@ -58,7 +55,7 @@ pub fn _generate_black_pawn_ray_attacks() -> Vec<Vec<usize>> {
             attacked_squares.push(ChessCell(rank - 1, file + 1));
             let filtered_attacked_squares: Vec<usize> = attacked_squares
                 .iter()
-                .filter(|square| !board[square.0][square.1].is_aether())
+                .filter(|&&square| !square.is_aether())
                 .map(|square| square.as_index())
                 .collect();
             ray_attack_lookup.push(filtered_attacked_squares)
