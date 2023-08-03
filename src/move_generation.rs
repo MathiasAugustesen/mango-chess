@@ -1,4 +1,3 @@
-use crate::ChessMove;
 use crate::board::BoardState;
 use crate::board::ChessCell;
 use crate::board::Piece;
@@ -9,19 +8,12 @@ use crate::board::Square;
 use crate::constants::*;
 use crate::ray_attacks::KING_RAY_ATTACKS;
 use crate::ray_attacks::KNIGHT_RAY_ATTACKS;
+use crate::ChessMove;
 const BISHOP_DIRECTIONS: [(i32, i32); 4] = [(-1, -1), (-1, 1), (1, -1), (1, 1)];
 const ROOK_DIRECTIONS: [(i32, i32); 4] = [(-1, 0), (0, -1), (0, 1), (1, 0)];
 pub fn generate_moves(board_state: &mut BoardState) -> Vec<ChessMove> {
     let mut valid_moves: Vec<ChessMove> = Vec::with_capacity(16);
-    let mut potential_moves: Vec<ChessMove> = Vec::with_capacity(16);
-    let player_to_move = board_state.to_move;
-    let piece_positions = board_state.get_piece_positions(player_to_move);
-
-    for position in piece_positions {
-        if let Square::Full(piece) = *board_state.board.square(position) {
-            generate_pseudo_moves_for_piece(piece, board_state, position, &mut potential_moves);
-        }
-    }
+    let potential_moves = generate_pseudo_moves_for_player(board_state);
     for mov in potential_moves {
         board_state.make_move(mov);
         if board_state.is_valid_move() {
@@ -30,6 +22,16 @@ pub fn generate_moves(board_state: &mut BoardState) -> Vec<ChessMove> {
         board_state.unmake_move();
     }
     valid_moves
+}
+pub fn generate_pseudo_moves_for_player(board_state: &BoardState) -> Vec<ChessMove> {
+    let piece_positions = board_state.get_piece_positions(board_state.to_move);
+    let mut potential_moves: Vec<ChessMove> = Vec::with_capacity(16);
+
+    for position in piece_positions {
+        let piece = board_state.board.square(position).piece().unwrap();
+        generate_pseudo_moves_for_piece(piece, board_state, position, &mut potential_moves);
+    }
+    potential_moves
 }
 pub fn generate_pseudo_moves_for_piece(
     piece: Piece,
@@ -50,11 +52,7 @@ pub fn generate_pseudo_moves_for_piece(
         Queen => queen_moves(color, board_state, position, pseudo_moves),
     }
 }
-fn white_pawn_moves(
-    board_state: &BoardState,
-    position: ChessCell,
-    moves: &mut Vec<ChessMove>,
-) {
+fn white_pawn_moves(board_state: &BoardState, position: ChessCell, moves: &mut Vec<ChessMove>) {
     let ChessCell(rank, file) = position;
     let left_cap = ChessCell(rank + 1, file - 1);
     let target = board_state.board.square(left_cap);
@@ -74,20 +72,16 @@ fn white_pawn_moves(
         moves.push((position, one_forward).into());
 
         if rank == RANK_2 {
-        let two_forward = ChessCell(rank + 2, file);
-        let target = board_state.board.square(two_forward);
-        if target.is_empty() {
-            moves.push((position, two_forward).into());
+            let two_forward = ChessCell(rank + 2, file);
+            let target = board_state.board.square(two_forward);
+            if target.is_empty() {
+                moves.push((position, two_forward).into());
+            }
         }
-    }
     }
 }
 
-fn black_pawn_moves(
-    board_state: &BoardState,
-    position: ChessCell,
-    moves: &mut Vec<ChessMove>,
-) {
+fn black_pawn_moves(board_state: &BoardState, position: ChessCell, moves: &mut Vec<ChessMove>) {
     let ChessCell(rank, file) = position;
     let left_cap = ChessCell(rank - 1, file - 1);
     let target = board_state.board.square(left_cap);
@@ -107,12 +101,12 @@ fn black_pawn_moves(
         moves.push((position, one_forward).into());
 
         if rank == RANK_7 {
-        let two_forward = ChessCell(rank - 2, file);
-        let target = board_state.board.square(two_forward);
-        if target.is_empty() {
-            moves.push((position, two_forward).into());
+            let two_forward = ChessCell(rank - 2, file);
+            let target = board_state.board.square(two_forward);
+            if target.is_empty() {
+                moves.push((position, two_forward).into());
+            }
         }
-    }
     }
 }
 pub fn knight_moves(
