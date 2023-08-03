@@ -1,6 +1,6 @@
 use crate::board::BoardState;
+use crate::move_generation::{generate_moves, generate_pseudo_moves_for_player};
 use crate::{evaluation, ChessMove};
-use crate::move_generation::generate_moves;
 pub fn negamax(
     board_state: &mut BoardState,
     depth: u8,
@@ -11,13 +11,17 @@ pub fn negamax(
 ) -> i32 {
     if depth == 0 {
         *counter += 1;
-        return board_state.eval()
+        return board_state.eval();
     }
     let mut best_eval = -i32::MAX;
-    let available_moves = generate_moves(board_state);
+    let available_pseudo_moves = generate_pseudo_moves_for_player(board_state);
     //generated_moves.sort_unstable_by_key(evaluation::evaluate);
-    for mov in available_moves {
+    for mov in available_pseudo_moves {
         board_state.make_move(mov);
+        if !board_state.is_valid_move() {
+            board_state.unmake_move();
+            continue;
+        }
         let eval = -negamax(board_state, depth - 1, -beta, -alpha, counter, prunes);
         board_state.unmake_move();
         let alpha = alpha.max(eval);
@@ -30,10 +34,7 @@ pub fn negamax(
     best_eval
 }
 
-pub fn search(
-    board_state: &mut BoardState,
-    depth: u8,
-) -> (i32, Option<ChessMove>, i32, i32) {
+pub fn search(board_state: &mut BoardState, depth: u8) -> (i32, Option<ChessMove>, i32, i32) {
     let mut alpha = -i32::MAX;
     let beta = i32::MAX;
     let mut best_eval = -i32::MAX;
