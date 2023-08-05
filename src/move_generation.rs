@@ -36,6 +36,7 @@ pub fn generate_castling_moves(board_state: &BoardState) -> Vec<ChessMove> {
 
         if step_one.is_empty()
             && step_two.is_empty()
+            && !board_state.square_is_attacked(board_state.king_location_of(board_state.to_move), board_state.to_move.opposite())
             && !board_state.square_is_attacked(step_one_cell, board_state.to_move.opposite())
             && !board_state.square_is_attacked(step_two_cell, board_state.to_move.opposite())
         {

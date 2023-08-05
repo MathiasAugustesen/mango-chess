@@ -3,7 +3,7 @@ pub mod board;
 pub mod constants;
 pub mod fen;
 pub mod move_generation;
-use board::{ChessCell, PieceColor, CastlingType};
+use board::{CastlingType, ChessCell, PieceColor};
 use constants::*;
 pub mod engine;
 pub mod evaluation;
@@ -31,19 +31,17 @@ impl From<(ChessCell, ChessCell)> for ChessMove {
 }
 impl From<CastlingType> for ChessMove {
     fn from(value: CastlingType) -> Self {
-        let (start, dest) =
-        match value {
+        let (start, dest) = match value {
             CastlingType::WhiteKingSide => ((RANK_1, E_FILE), (RANK_1, G_FILE)),
             CastlingType::WhiteQueenSide => ((RANK_1, E_FILE), (RANK_1, C_FILE)),
             CastlingType::BlackKingSide => ((RANK_8, E_FILE), (RANK_8, G_FILE)),
-            CastlingType::BlackQueenSide => ((RANK_8, E_FILE), (RANK_8, C_FILE))
+            CastlingType::BlackQueenSide => ((RANK_8, E_FILE), (RANK_8, C_FILE)),
         };
         ChessMove {
             start: ChessCell::from(start),
             dest: ChessCell::from(dest),
         }
     }
-
 }
 impl ChessMove {
     pub fn reverse(self) -> ChessMove {

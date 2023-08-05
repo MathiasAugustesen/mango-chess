@@ -14,6 +14,6 @@ pub fn move_sort(board_state: &BoardState, mov: ChessMove) -> i32 {
     move_score
 }
 #[inline]
-fn positional_value_delta(piece: Piece, mov: ChessMove) -> i32 {
+pub fn positional_value_delta(piece: Piece, mov: ChessMove) -> i32 {
     positional_value(piece, mov.dest.as_index()) - positional_value(piece, mov.start.as_index())
 }
