@@ -1,4 +1,8 @@
-use crate::{board::{BoardState, Piece}, ChessMove, evaluation::positional_value};
+use crate::{
+    board::{BoardState, Piece},
+    evaluation::positional_value,
+    ChessMove,
+};
 
 pub fn move_sort(board_state: &BoardState, mov: ChessMove) -> i32 {
     let moving_piece = board_state.board.square(mov.start).piece().unwrap();
@@ -10,6 +14,6 @@ pub fn move_sort(board_state: &BoardState, mov: ChessMove) -> i32 {
     move_score
 }
 #[inline]
-fn positional_value_delta(piece: Piece, mov: ChessMove) -> i32 {
+pub fn positional_value_delta(piece: Piece, mov: ChessMove) -> i32 {
     positional_value(piece, mov.dest.as_index()) - positional_value(piece, mov.start.as_index())
 }

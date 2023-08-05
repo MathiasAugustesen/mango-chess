@@ -22,7 +22,7 @@ pub fn negamax(
         board_state.make_move(mov);
         if !board_state.is_valid_move() {
             board_state.unmake_move();
-            continue
+            continue;
         }
         let eval = -negamax(board_state, depth - 1, -beta, -alpha, counter, prunes);
         board_state.unmake_move();
