@@ -1,4 +1,8 @@
-use crate::{board::{BoardState, Piece}, ChessMove, evaluation::positional_value};
+use crate::{
+    board::{BoardState, Piece},
+    evaluation::positional_value,
+    ChessMove,
+};
 
 pub fn move_sort(board_state: &BoardState, mov: ChessMove) -> i32 {
     let moving_piece = board_state.board.square(mov.start).piece().unwrap();

@@ -1,8 +1,8 @@
-use crate::ChessMove;
 use crate::board::BoardState;
 use crate::board::PieceColor::*;
 use crate::board::{PieceKind, PieceKind::*};
 use crate::move_generation::*;
+use crate::ChessMove;
 use crate::{board::ChessCell, constants::*};
 pub fn _generate_big_piece_ray_attacks(kind: PieceKind) -> Vec<Vec<usize>> {
     let board_state = BoardState::empty_game();
@@ -20,10 +20,8 @@ pub fn _generate_big_piece_ray_attacks(kind: PieceKind) -> Vec<Vec<usize>> {
                 Queen => queen_moves(color, &board_state, position, &mut moves),
                 King => king_moves(color, &board_state, position, &mut moves),
             }
-            let filtered_attacked_squares: Vec<usize> = moves
-                .iter()
-                .map(|mov| mov.dest.as_index())
-                .collect();
+            let filtered_attacked_squares: Vec<usize> =
+                moves.iter().map(|mov| mov.dest.as_index()).collect();
             ray_attack_lookup.push(filtered_attacked_squares);
         }
     }

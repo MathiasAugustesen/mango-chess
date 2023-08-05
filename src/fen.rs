@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
-use crate::board::ChessBoard;
 use crate::board::CastlingRights;
+use crate::board::ChessBoard;
 use crate::board::ChessCell;
 use crate::board::Piece;
 use crate::board::PieceColor;
