@@ -1,6 +1,7 @@
 use crate::board::BoardState;
 use crate::move_generation::{generate_moves, generate_pseudo_moves_for_player};
-use crate::{evaluation, ChessMove};
+use crate::move_ordering::move_sort;
+use crate::ChessMove;
 pub fn negamax(
     board_state: &mut BoardState,
     depth: u8,
@@ -14,13 +15,14 @@ pub fn negamax(
         return board_state.eval();
     }
     let mut best_eval = -i32::MAX;
-    let available_pseudo_moves = generate_pseudo_moves_for_player(board_state);
-    //generated_moves.sort_unstable_by_key(evaluation::evaluate);
+    let mut available_pseudo_moves = generate_pseudo_moves_for_player(board_state);
+
+    available_pseudo_moves.sort_by_cached_key(|&mov| -move_sort(&board_state, mov));
     for mov in available_pseudo_moves {
         board_state.make_move(mov);
         if !board_state.is_valid_move() {
             board_state.unmake_move();
-            continue;
+            continue
         }
         let eval = -negamax(board_state, depth - 1, -beta, -alpha, counter, prunes);
         board_state.unmake_move();
@@ -41,15 +43,9 @@ pub fn search(board_state: &mut BoardState, depth: u8) -> (i32, Option<ChessMove
     let mut best_move = None;
     let mut nodes_evaluated = 0;
     let mut prunes = 0;
-    let possible_moves = generate_moves(board_state);
-    if possible_moves.is_empty() {
-        return (
-            evaluation::evaluate(board_state),
-            None,
-            nodes_evaluated,
-            prunes,
-        );
-    }
+    let mut possible_moves = generate_moves(board_state);
+
+    possible_moves.sort_by_cached_key(|&mov| -move_sort(&board_state, mov));
     for mov in possible_moves {
         board_state.make_move(mov);
         let eval = -negamax(

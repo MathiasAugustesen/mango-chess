@@ -22,16 +22,18 @@ fn get_player_eval(board_state: &BoardState, color: PieceColor) -> i32 {
 }
 
 pub fn evaluate_piece(piece: Piece, pos: usize) -> i32 {
+    piece.value() + positional_value(piece, pos)
+}
+pub fn positional_value(piece: Piece, pos: usize) -> i32 {
     let position_values_index = match piece.color() {
         White => 63 - pos,
         Black => pos,
     };
-    PIECE_VALUES[piece.index()] + POSITION_VALUES[piece.index()][position_values_index]
+    POSITION_VALUES[piece.index()][position_values_index]
 }
 pub fn evaluate_game_end() -> i32 {
     0
 }
-const PIECE_VALUES: [i32; 6] = [100, 300, 325, 500, 900, 10000];
 const POSITION_VALUES: [[i32; 64]; 6] = [
     PAWN_POSITION_VALUES,
     KNIGHT_POSITION_VALUES,
