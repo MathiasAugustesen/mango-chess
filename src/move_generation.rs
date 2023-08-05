@@ -21,7 +21,28 @@ pub fn generate_moves(board_state: &mut BoardState) -> Vec<ChessMove> {
         }
         board_state.unmake_move();
     }
+    valid_moves.extend(generate_castling_moves(board_state));
     valid_moves
+}
+pub fn generate_castling_moves(board_state: &BoardState) -> Vec<ChessMove> {
+    let mut castling_moves = Vec::new();
+    let ChessCell(king_rank, king_file) = board_state.king_location_of(board_state.to_move);
+    for castling_type in board_state.available_castling_types(board_state.to_move) {
+        let direction = castling_type.direction();
+        let step_one_cell = ChessCell(king_rank, (king_file as i8 + direction) as usize);
+        let step_two_cell = ChessCell(king_rank, (king_file as i8 + direction * 2) as usize);
+        let step_one = board_state.board.square(step_one_cell);
+        let step_two = board_state.board.square(step_two_cell);
+
+        if step_one.is_empty()
+            && step_two.is_empty()
+            && !board_state.square_is_attacked(step_one_cell, board_state.to_move.opposite())
+            && !board_state.square_is_attacked(step_two_cell, board_state.to_move.opposite())
+        {
+            castling_moves.push(ChessMove::from(castling_type));
+        }
+    }
+    castling_moves
 }
 pub fn generate_pseudo_moves_for_player(board_state: &BoardState) -> Vec<ChessMove> {
     let piece_positions = board_state.get_piece_positions(board_state.to_move);

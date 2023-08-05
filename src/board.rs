@@ -1,4 +1,3 @@
-use crate::GameResult;
 use crate::constants::*;
 use crate::evaluation::evaluate;
 use crate::evaluation::evaluate_piece;
@@ -8,6 +7,7 @@ use crate::fen::en_passant_square_from_fen;
 use crate::move_generation::generate_pseudo_moves_for_piece;
 use crate::ray_attacks::*;
 use crate::ChessMove;
+use crate::GameResult;
 use std::str::FromStr;
 use PieceColor::*;
 use PieceKind::*;
@@ -170,7 +170,7 @@ impl Piece {
             Bishop => 325,
             Rook => 500,
             Queen => 900,
-            King => 10000
+            King => 10000,
         }
     }
 }
@@ -193,6 +193,7 @@ impl TryFrom<char> for Piece {
         Ok(piece)
     }
 }
+#[derive(Debug, Clone, Copy)]
 pub enum CastlingType {
     WhiteKingSide,
     WhiteQueenSide,
@@ -210,6 +211,12 @@ impl CastlingType {
         match color {
             White => CastlingType::WhiteQueenSide,
             Black => CastlingType::BlackQueenSide,
+        }
+    }
+    pub fn direction(self) -> i8 {
+        match self {
+            CastlingType::WhiteKingSide | CastlingType::BlackKingSide => 1,
+            CastlingType::WhiteQueenSide | CastlingType::BlackQueenSide => -1,
         }
     }
 }
@@ -319,7 +326,12 @@ impl EntropyStack {
         self.top_mut().last_capture = captured_piece
     }
     pub fn push(&mut self, mov: ChessMove, capture: Option<Piece>) {
-        self.stack.push(MoveEntropy::new(mov, capture, self.eval(), self.castling_rights()))
+        self.stack.push(MoveEntropy::new(
+            mov,
+            capture,
+            self.eval(),
+            self.castling_rights(),
+        ))
     }
 }
 #[derive(Default, Debug, Clone, Copy, PartialEq)]
@@ -327,15 +339,20 @@ struct MoveEntropy {
     pub last_move: Option<ChessMove>,
     pub last_capture: Option<Piece>,
     pub eval: i32,
-    pub castling_rights: CastlingRights
+    pub castling_rights: CastlingRights,
 }
 impl MoveEntropy {
-    pub fn new(mov: ChessMove, capture: Option<Piece>, eval: i32, castling_rights: CastlingRights) -> MoveEntropy {
+    pub fn new(
+        mov: ChessMove,
+        capture: Option<Piece>,
+        eval: i32,
+        castling_rights: CastlingRights,
+    ) -> MoveEntropy {
         MoveEntropy {
             last_move: Some(mov),
             last_capture: capture,
             eval,
-            castling_rights
+            castling_rights,
         }
     }
 }
@@ -386,7 +403,6 @@ impl ChessBoard {
         *chess_board.square_mut(ChessCell(RANK_8, H_FILE)) = Piece::rook(Black).into();
         chess_board
     }
-
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -451,7 +467,6 @@ impl BoardState {
         board_state.set_eval(evaluate(&board_state));
         board_state.set_castling_rights(CastlingRights::all_castling_rights());
         board_state
-        
     }
     pub fn from_fen(fen: &str) -> Result<BoardState, &str> {
         let fen_parts: Vec<&str> = fen.split_ascii_whitespace().collect();
@@ -514,7 +529,29 @@ impl BoardState {
     }
     #[inline]
     pub fn castling_rights(&self) -> CastlingRights {
-    self.entropy_stack.castling_rights()
+        self.entropy_stack.castling_rights()
+    }
+    pub fn available_castling_types(&self, color: PieceColor) -> Vec<CastlingType> {
+        let mut castling_types = Vec::new();
+        match color {
+            White => {
+                if self.castling_rights().white_king_side_castling {
+                    castling_types.push(CastlingType::WhiteKingSide)
+                }
+                if self.castling_rights().white_queen_side_castling {
+                    castling_types.push(CastlingType::WhiteQueenSide)
+                }
+            }
+            Black => {
+                if self.castling_rights().black_king_side_castling {
+                    castling_types.push(CastlingType::BlackKingSide)
+                }
+                if self.castling_rights().black_queen_side_castling {
+                    castling_types.push(CastlingType::BlackQueenSide)
+                }
+            }
+        }
+        castling_types
     }
     #[inline]
     pub fn set_last_move(&mut self, mov: ChessMove) {
@@ -534,7 +571,10 @@ impl BoardState {
         self.entropy_stack.top_mut().castling_rights = castling_rights
     }
     pub fn remove_castling_right(&mut self, castling_type: CastlingType) {
-        self.entropy_stack.top_mut().castling_rights.remove_castling_right(castling_type)
+        self.entropy_stack
+            .top_mut()
+            .castling_rights
+            .remove_castling_right(castling_type)
     }
     pub fn make_move(&mut self, mov: ChessMove) {
         let start = mov.start;
@@ -579,7 +619,6 @@ impl BoardState {
 
         *self.board.square_mut(start) = Square::Empty;
 
-
         *self.board.square_mut(dest) = Square::Full(moving_piece);
         self.downgrade_bitboards(reverse_move, self.last_capture());
 
@@ -621,7 +660,7 @@ impl BoardState {
         let potentially_mated_king = self.king_location_of(self.to_move);
         match self.square_is_attacked(potentially_mated_king, self.to_move.opposite()) {
             true => GameResult::Winner(self.to_move.opposite()),
-            false => GameResult::Draw
+            false => GameResult::Draw,
         }
     }
     pub fn get_piece_positions(&self, color: PieceColor) -> Vec<ChessCell> {
@@ -641,14 +680,13 @@ impl BoardState {
     pub fn king_location_of(&self, color: PieceColor) -> ChessCell {
         match color {
             White => self.white_king_location,
-            Black => self.black_king_location
+            Black => self.black_king_location,
         }
     }
-    // First, a list of all enemy pieces that x-ray the target is generated with a lookup table. 
+    // First, a list of all enemy pieces that x-ray the target is generated with a lookup table.
     // If this list is empty, the square is safe.
     // Returns true if any of the enemy pieces attack the target.
     pub fn square_is_attacked(&self, target_square: ChessCell, attacker: PieceColor) -> bool {
-
         let ray_attackers = self.ray_attackers(target_square, attacker);
         if ray_attackers.len() == 0 {
             return false;
