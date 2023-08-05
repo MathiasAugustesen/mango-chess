@@ -484,7 +484,7 @@ impl BoardState {
         let fen_to_move = fen_parts[1];
         let to_move = fen::to_move_from_fen(fen_to_move)?;
         let fen_castling_rights = fen_parts[2];
-        let _castling_rights = castling_rights_from_fen(fen_castling_rights)?;
+        let castling_rights = castling_rights_from_fen(fen_castling_rights)?;
         let fen_en_passant_square = fen_parts[3];
         let _en_passant_square = en_passant_square_from_fen(fen_en_passant_square)?;
         let _halfmove_clock = fen_parts[4];
@@ -507,6 +507,7 @@ impl BoardState {
             entropy_stack: EntropyStack::new(),
         };
         board_state.set_eval(evaluate(&board_state));
+        board_state.set_castling_rights(castling_rights);
         Ok(board_state)
     }
     #[inline]
