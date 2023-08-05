@@ -199,7 +199,21 @@ pub enum CastlingType {
     BlackKingSide,
     BlackQueenSide,
 }
-#[derive(Clone, PartialEq, Debug)]
+impl CastlingType {
+    pub fn color_king_side(color: PieceColor) -> CastlingType {
+        match color {
+            White => CastlingType::WhiteKingSide,
+            Black => CastlingType::BlackKingSide,
+        }
+    }
+    pub fn color_queen_side(color: PieceColor) -> CastlingType {
+        match color {
+            White => CastlingType::WhiteQueenSide,
+            Black => CastlingType::BlackQueenSide,
+        }
+    }
+}
+#[derive(Default, Clone, PartialEq, Debug, Copy)]
 pub struct CastlingRights {
     pub white_king_side_castling: bool,
     pub white_queen_side_castling: bool,
@@ -295,6 +309,9 @@ impl EntropyStack {
     pub fn eval(&self) -> i32 {
         self.top().eval
     }
+    pub fn castling_rights(&self) -> CastlingRights {
+        self.top().castling_rights
+    }
     pub fn set_last_move(&mut self, mov: ChessMove) {
         self.top_mut().last_move = Some(mov);
     }
@@ -302,21 +319,23 @@ impl EntropyStack {
         self.top_mut().last_capture = captured_piece
     }
     pub fn push(&mut self, mov: ChessMove, capture: Option<Piece>) {
-        self.stack.push(MoveEntropy::new(mov, capture, self.eval()))
+        self.stack.push(MoveEntropy::new(mov, capture, self.eval(), self.castling_rights()))
     }
 }
 #[derive(Default, Debug, Clone, Copy, PartialEq)]
 struct MoveEntropy {
     pub last_move: Option<ChessMove>,
     pub last_capture: Option<Piece>,
-    pub eval: i32
+    pub eval: i32,
+    pub castling_rights: CastlingRights
 }
 impl MoveEntropy {
-    pub fn new(mov: ChessMove, capture: Option<Piece>, eval: i32) -> MoveEntropy {
+    pub fn new(mov: ChessMove, capture: Option<Piece>, eval: i32, castling_rights: CastlingRights) -> MoveEntropy {
         MoveEntropy {
             last_move: Some(mov),
             last_capture: capture,
-            eval
+            eval,
+            castling_rights
         }
     }
 }
@@ -395,7 +414,6 @@ impl BoardState {
         let black_bitboard = BitBoard(0);
         let white_king_location = ChessCell(100, 100);
         let black_king_location = ChessCell(100, 100);
-        let _castling_rights = CastlingRights::no_castling_rights();
         let _en_passant_square: Option<()> = None;
         let _pawn_promotion: Option<()> = None;
         let entropy_stack = EntropyStack::new();
@@ -431,6 +449,7 @@ impl BoardState {
             entropy_stack,
         };
         board_state.set_eval(evaluate(&board_state));
+        board_state.set_castling_rights(CastlingRights::all_castling_rights());
         board_state
         
     }
@@ -494,6 +513,10 @@ impl BoardState {
         self.entropy_stack.eval() * self.to_move.relative_value()
     }
     #[inline]
+    pub fn castling_rights(&self) -> CastlingRights {
+    self.entropy_stack.castling_rights()
+    }
+    #[inline]
     pub fn set_last_move(&mut self, mov: ChessMove) {
         self.entropy_stack.set_last_move(mov)
     }
@@ -507,6 +530,12 @@ impl BoardState {
     pub fn increment_eval(&mut self, eval_increment: i32) {
         self.entropy_stack.top_mut().eval += eval_increment * self.to_move.relative_value()
     }
+    pub fn set_castling_rights(&mut self, castling_rights: CastlingRights) {
+        self.entropy_stack.top_mut().castling_rights = castling_rights
+    }
+    pub fn remove_castling_right(&mut self, castling_type: CastlingType) {
+        self.entropy_stack.top_mut().castling_rights.remove_castling_right(castling_type)
+    }
     pub fn make_move(&mut self, mov: ChessMove) {
         let start = mov.start;
         let dest = mov.dest;
@@ -518,10 +547,12 @@ impl BoardState {
         eval_increment -= evaluate_piece(moving_piece, start.as_index());
 
         let attacked_square = self.board.square(dest);
-        self.entropy_stack.push(mov, attacked_square.piece());
+
         if let Some(attacked_piece) = attacked_square.piece() {
             eval_increment += evaluate_piece(attacked_piece, dest.as_index());
         }
+
+        self.entropy_stack.push(mov, attacked_square.piece());
 
         *self.board.square_mut(dest) = Square::Full(moving_piece);
         eval_increment += evaluate_piece(moving_piece, dest.as_index());
