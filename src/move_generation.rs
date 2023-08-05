@@ -26,8 +26,11 @@ pub fn generate_moves(board_state: &mut BoardState) -> Vec<ChessMove> {
 }
 pub fn generate_castling_moves(board_state: &BoardState) -> Vec<ChessMove> {
     let mut castling_moves = Vec::new();
-    let ChessCell(king_rank, king_file) = board_state.king_location_of(board_state.to_move);
-    for castling_type in board_state.available_castling_types(board_state.to_move) {
+    let data = board_state.data();
+    let to_move = data.to_move;
+    let king_location = data.king_location_of(to_move);
+    let ChessCell(king_rank, king_file) = king_location;
+    for castling_type in data.available_castling_types(to_move) {
         let direction = castling_type.direction();
         let step_one_cell = ChessCell(king_rank, (king_file as i8 + direction) as usize);
         let step_two_cell = ChessCell(king_rank, (king_file as i8 + direction * 2) as usize);
@@ -36,9 +39,9 @@ pub fn generate_castling_moves(board_state: &BoardState) -> Vec<ChessMove> {
 
         if step_one.is_empty()
             && step_two.is_empty()
-            && !board_state.square_is_attacked(board_state.king_location_of(board_state.to_move), board_state.to_move.opposite())
-            && !board_state.square_is_attacked(step_one_cell, board_state.to_move.opposite())
-            && !board_state.square_is_attacked(step_two_cell, board_state.to_move.opposite())
+            && !board_state.square_is_attacked(king_location, to_move.opposite())
+            && !board_state.square_is_attacked(step_one_cell, to_move.opposite())
+            && !board_state.square_is_attacked(step_two_cell, to_move.opposite())
         {
             castling_moves.push(ChessMove::from(castling_type));
         }
@@ -46,7 +49,7 @@ pub fn generate_castling_moves(board_state: &BoardState) -> Vec<ChessMove> {
     castling_moves
 }
 pub fn generate_pseudo_moves_for_player(board_state: &BoardState) -> Vec<ChessMove> {
-    let piece_positions = board_state.get_piece_positions(board_state.to_move);
+    let piece_positions = board_state.get_piece_positions(board_state.data().to_move);
     let mut potential_moves: Vec<ChessMove> = Vec::with_capacity(16);
 
     for position in piece_positions {

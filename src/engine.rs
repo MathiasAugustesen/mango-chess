@@ -12,7 +12,7 @@ pub fn negamax(
 ) -> i32 {
     if depth == 0 {
         *counter += 1;
-        return board_state.eval();
+        return board_state.data().relative_eval();
     }
     let mut best_eval = -i32::MAX;
     let mut available_pseudo_moves = generate_pseudo_moves_for_player(board_state);
@@ -59,7 +59,7 @@ pub fn search(board_state: &mut BoardState, depth: u8) -> (i32, Option<ChessMove
 
         if eval > best_eval {
             best_eval = eval;
-            best_move = board_state.last_move();
+            best_move = board_state.data().last_move;
         }
         board_state.unmake_move();
         alpha = alpha.max(eval);

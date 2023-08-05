@@ -9,7 +9,7 @@ pub mod engine;
 pub mod evaluation;
 pub mod move_ordering;
 mod ray_attacks;
-const DEPTH: u8 = 5;
+const DEPTH: u8 = 3;
 use crate::board::PieceColor::*;
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct ChessMove {
@@ -83,7 +83,7 @@ fn main() {
         moves += 1;
         let best_move = best_move.unwrap();
         let absolute_eval = best_eval
-            * match board_state.to_move {
+            * match board_state.data().to_move {
                 White => 1,
                 Black => -1,
             };
