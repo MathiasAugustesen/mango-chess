@@ -1,3 +1,4 @@
+use crate::GameResult;
 use crate::constants::*;
 use crate::evaluation::evaluate;
 use crate::evaluation::evaluate_piece;
@@ -14,6 +15,14 @@ use PieceKind::*;
 pub enum PieceColor {
     White,
     Black,
+}
+impl std::fmt::Display for PieceColor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            White => write!(f, "white"),
+            Black => write!(f, "black"),
+        }
+    }
 }
 impl PieceColor {
     pub fn opposite(self) -> PieceColor {
@@ -150,8 +159,19 @@ impl Piece {
     const fn king(color: PieceColor) -> Piece {
         Piece { color, kind: King }
     }
-    pub const fn index(self) -> usize {
+    #[inline]
+    pub fn index(self) -> usize {
         self.kind.index()
+    }
+    pub fn value(self) -> i32 {
+        match self.kind {
+            Pawn => 100,
+            Knight => 300,
+            Bishop => 325,
+            Rook => 500,
+            Queen => 900,
+            King => 10000
+        }
     }
 }
 impl TryFrom<char> for Piece {
@@ -566,6 +586,13 @@ impl BoardState {
             opposing_player_bitboard.add_piece(mov.start.as_index());
         }
     }
+    pub fn get_game_winner(&self) -> GameResult {
+        let potentially_mated_king = self.king_location_of(self.to_move);
+        match self.square_is_attacked(potentially_mated_king, self.to_move.opposite()) {
+            true => GameResult::Winner(self.to_move.opposite()),
+            false => GameResult::Draw
+        }
+    }
     pub fn get_piece_positions(&self, color: PieceColor) -> Vec<ChessCell> {
         let mut piece_positions = Vec::new();
         let mut bitboard = match color {
@@ -580,16 +607,21 @@ impl BoardState {
         }
         piece_positions
     }
-    // Given an arbitrary position, determine if the position is legal given that the player next to move is self.to_move.
-    // This method does not make any assumptions about how the move was made
-    //
-    // First, a list of all enemy pieces that x-ray the king is generated with a lookup table. If this list is empty, the king is safe.
-    // For all pieces that x-ray the king, the moves of that piece are generated, and will return true if any piece attacks the king.
-    pub fn is_valid_move(&self) -> bool {
-        let king_location = match self.to_move.opposite() {
+    pub fn king_location_of(&self, color: PieceColor) -> ChessCell {
+        match color {
             White => self.white_king_location,
-            Black => self.black_king_location,
-        };
+            Black => self.black_king_location
+        }
+    }
+    // First, a list of all enemy pieces that x-ray the target is generated with a lookup table. 
+    // If this list is empty, the square is safe.
+    // Returns true if any of the enemy pieces attack the target.
+    pub fn square_is_attacked(&self, target_square: ChessCell, attacker: PieceColor) -> bool {
+
+        let ray_attackers = self.ray_attackers(target_square, attacker);
+        if ray_attackers.len() == 0 {
+            return false;
+        }
         /*
         This block perform the regular 'check every piece' way of validating pseudo moves.
         let mut ray_attackers: Vec<(Piece, ChessCell)> = Vec::new();
@@ -599,25 +631,30 @@ impl BoardState {
             ray_attackers.push((piece, piece_position));
         }
         */
-        let ray_attackers = self.ray_attackers(king_location, self.to_move);
-        if ray_attackers.len() == 0 {
-            return true;
-        }
-
         let mut enemy_moves: Vec<ChessMove> = Vec::new();
         for (piece, position) in ray_attackers {
+            // TODO: Fix looking at already checked moves
             generate_pseudo_moves_for_piece(piece, self, position, &mut enemy_moves);
-            let king_is_attacked = enemy_moves
+            let square_is_attacked = enemy_moves
                 .iter()
                 .map(|mov| mov.dest)
-                .any(|attacked_square| attacked_square == king_location);
-            if king_is_attacked {
-                return false;
+                .any(|attacked_square| attacked_square == target_square);
+            if square_is_attacked {
+                return true;
             }
         }
-        true
+        false
     }
-    // This function will search a lookup table and check if the given piece location is in an x-ray attack by the specified color.
+    // Given an arbitrary position, determine if the position is legal given that the player next to move is self.to_move.
+    // This method does not make any assumptions about how the move was made.
+    pub fn is_valid_move(&self) -> bool {
+        let king_location = match self.to_move.opposite() {
+            White => self.white_king_location,
+            Black => self.black_king_location,
+        };
+        !self.square_is_attacked(king_location, self.to_move)
+    }
+    // Searches a lookup table and returns all pieces that attack the target assuming an empty board.
     pub fn ray_attackers(
         &self,
         target_square: ChessCell,
