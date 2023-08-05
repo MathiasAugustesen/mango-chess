@@ -642,6 +642,7 @@ impl BoardState {
             if square_is_attacked {
                 return true;
             }
+            enemy_moves.clear()
         }
         false
     }
