@@ -135,28 +135,28 @@ impl Piece {
     pub fn kind(self) -> PieceKind {
         self.kind
     }
-    const fn pawn(color: PieceColor) -> Piece {
+    fn pawn(color: PieceColor) -> Piece {
         Piece { color, kind: Pawn }
     }
-    const fn knight(color: PieceColor) -> Piece {
+    fn knight(color: PieceColor) -> Piece {
         Piece {
             color,
             kind: Knight,
         }
     }
-    const fn bishop(color: PieceColor) -> Piece {
+    fn bishop(color: PieceColor) -> Piece {
         Piece {
             color,
             kind: Bishop,
         }
     }
-    const fn rook(color: PieceColor) -> Piece {
+    fn rook(color: PieceColor) -> Piece {
         Piece { color, kind: Rook }
     }
-    const fn queen(color: PieceColor) -> Piece {
+    fn queen(color: PieceColor) -> Piece {
         Piece { color, kind: Queen }
     }
-    const fn king(color: PieceColor) -> Piece {
+    fn king(color: PieceColor) -> Piece {
         Piece { color, kind: King }
     }
     #[inline]
