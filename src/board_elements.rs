@@ -114,11 +114,40 @@ impl From<Piece> for Square {
         Square::Full(value)
     }
 }
+impl std::fmt::Display for Square {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            Square::Empty => write!(f, " "),
+            Square::Aether => write!(f, "Aether is not meant for printing"),
+            Square::Full(piece) => write!(f, "{}", piece),
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Piece {
     pub color: PieceColor,
     pub kind: PieceKind,
+}
+impl std::fmt::Display for Piece {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let symbol = match (self.color, self.kind) {
+            (White, Pawn) => '♙',
+            (White, Knight) => '♘',
+            (White, Bishop) => '♗',
+            (White, Rook) => '♖',
+            (White, Queen) => '♕',
+            (White, King) => '♔',
+            (Black, Pawn) => '♟',
+            (Black, Knight) => '♞',
+            (Black, Bishop) => '♝',
+            (Black, Rook) => '♜',
+            (Black, Queen) => '♛',
+            (Black, King) => '♚',
+        };
+        write!(f, "{symbol}")
+
+    }
 }
 impl Piece {
     pub fn pawn(color: PieceColor) -> Piece {

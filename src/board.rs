@@ -88,6 +88,17 @@ impl MoveEntropy {
 }
 #[derive(Clone, PartialEq, Debug)]
 pub struct ChessBoard([Square; 144]);
+impl std::fmt::Display for ChessBoard {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for rank in (BOARD_START..=BOARD_END).rev() {
+            writeln!(f)?;
+            for file in BOARD_START..=BOARD_END {
+                write!(f, "{} ", self.square(ChessCell(rank, file)))?
+            }
+        }
+        Ok(())
+    }
+}
 impl ChessBoard {
     #[inline]
     pub fn square(&self, square: ChessCell) -> &Square {
