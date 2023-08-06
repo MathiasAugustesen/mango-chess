@@ -1,3 +1,8 @@
+use std::str::FromStr;
+
+use crate::constants::*;
+use PieceColor::*;
+use PieceKind::*;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PieceColor {
     White,
@@ -112,38 +117,32 @@ impl From<Piece> for Square {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Piece {
-    color: PieceColor,
-    kind: PieceKind,
+    pub color: PieceColor,
+    pub kind: PieceKind,
 }
 impl Piece {
-    pub fn color(self) -> PieceColor {
-        self.color
-    }
-    pub fn kind(self) -> PieceKind {
-        self.kind
-    }
-    fn pawn(color: PieceColor) -> Piece {
+    pub fn pawn(color: PieceColor) -> Piece {
         Piece { color, kind: Pawn }
     }
-    fn knight(color: PieceColor) -> Piece {
+    pub fn knight(color: PieceColor) -> Piece {
         Piece {
             color,
             kind: Knight,
         }
     }
-    fn bishop(color: PieceColor) -> Piece {
+    pub fn bishop(color: PieceColor) -> Piece {
         Piece {
             color,
             kind: Bishop,
         }
     }
-    fn rook(color: PieceColor) -> Piece {
+    pub fn rook(color: PieceColor) -> Piece {
         Piece { color, kind: Rook }
     }
-    fn queen(color: PieceColor) -> Piece {
+    pub fn queen(color: PieceColor) -> Piece {
         Piece { color, kind: Queen }
     }
-    fn king(color: PieceColor) -> Piece {
+    pub fn king(color: PieceColor) -> Piece {
         Piece { color, kind: King }
     }
     #[inline]

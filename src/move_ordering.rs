@@ -1,7 +1,7 @@
+use crate::board::BoardState;
 use crate::{
-    board::{BoardState, Piece},
+    board_elements::{ChessMove, Piece},
     evaluation::positional_value,
-    ChessMove,
 };
 
 pub fn move_sort(board_state: &BoardState, mov: ChessMove) -> i32 {

@@ -4,14 +4,13 @@ pub mod board_elements;
 pub mod constants;
 pub mod fen;
 pub mod move_generation;
-use board::{CastlingType, ChessCell, PieceColor};
-use constants::*;
+use board_elements::{CastlingType, ChessCell, PieceColor};
 pub mod engine;
 pub mod evaluation;
 pub mod move_ordering;
 mod ray_attacks;
 const DEPTH: u8 = 5;
-use crate::board::PieceColor::*;
+use crate::board_elements::PieceColor::*;
 
 pub enum GameResult {
     Winner(PieceColor),

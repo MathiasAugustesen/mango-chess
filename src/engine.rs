@@ -1,7 +1,7 @@
 use crate::board::BoardState;
+use crate::board_elements::ChessMove;
 use crate::move_generation::{generate_moves, generate_pseudo_moves_for_player};
 use crate::move_ordering::move_sort;
-use crate::ChessMove;
 pub fn negamax(
     board_state: &mut BoardState,
     depth: u8,

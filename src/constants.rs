@@ -1,4 +1,4 @@
-use crate::board::BitBoard;
+use crate::board_elements::BitBoard;
 
 pub const BOARD_START: usize = 2;
 pub const BOARD_END: usize = 9;
