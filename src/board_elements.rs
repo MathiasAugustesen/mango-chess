@@ -406,10 +406,10 @@ impl From<(ChessCell, ChessCell)> for ChessMove {
 impl From<CastlingType> for ChessMove {
     fn from(value: CastlingType) -> Self {
         let (start, dest) = match value {
-            CastlingType::WhiteKingSide => ((RANK_1, E_FILE), (RANK_1, G_FILE)),
-            CastlingType::WhiteQueenSide => ((RANK_1, E_FILE), (RANK_1, C_FILE)),
-            CastlingType::BlackKingSide => ((RANK_8, E_FILE), (RANK_8, G_FILE)),
-            CastlingType::BlackQueenSide => ((RANK_8, E_FILE), (RANK_8, C_FILE)),
+            CastlingType::WhiteKingSide => (E1, G1),
+            CastlingType::WhiteQueenSide => (E1, C1),
+            CastlingType::BlackKingSide => (E8, G8),
+            CastlingType::BlackQueenSide => (E8, C8),
         };
         ChessMove {
             start: ChessCell::from(start),
