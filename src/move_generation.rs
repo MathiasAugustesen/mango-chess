@@ -11,17 +11,16 @@ use crate::ray_attacks::KING_RAY_ATTACKS;
 use crate::ray_attacks::KNIGHT_RAY_ATTACKS;
 const BISHOP_DIRECTIONS: [(i32, i32); 4] = [(-1, -1), (-1, 1), (1, -1), (1, 1)];
 const ROOK_DIRECTIONS: [(i32, i32); 4] = [(-1, 0), (0, -1), (0, 1), (1, 0)];
-pub fn generate_moves(board_state: &mut BoardState) -> Vec<ChessMove> {
+pub fn generate_moves(board_state: &BoardState) -> Vec<ChessMove> {
     let mut valid_moves: Vec<ChessMove> = Vec::with_capacity(16);
     let potential_moves = generate_pseudo_moves_for_player(board_state);
     for mov in potential_moves {
-        board_state.make_move(mov);
-        if board_state.is_valid_move() {
+        let mut copy_board = board_state.clone();
+        copy_board.make_move(mov);
+        if copy_board.is_valid_move() {
             valid_moves.push(mov);
         }
-        board_state.unmake_move();
     }
-    valid_moves.extend(generate_castling_moves(board_state));
     valid_moves
 }
 pub fn generate_castling_moves(board_state: &BoardState) -> Vec<ChessMove> {
@@ -56,6 +55,7 @@ pub fn generate_pseudo_moves_for_player(board_state: &BoardState) -> Vec<ChessMo
         let piece = board_state.board.square(position).piece().unwrap();
         generate_pseudo_moves_for_piece(piece, board_state, position, &mut potential_moves);
     }
+    potential_moves.extend(generate_castling_moves(board_state));
     potential_moves
 }
 pub fn generate_pseudo_moves_for_piece(

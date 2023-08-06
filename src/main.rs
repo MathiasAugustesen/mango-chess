@@ -11,7 +11,7 @@ pub mod move_ordering;
 mod ray_attacks;
 const DEPTH: u8 = 5;
 use crate::board_elements::PieceColor::*;
-
+#[derive(Clone, Copy, Debug)]
 pub enum GameResult {
     Winner(PieceColor),
     Draw,
@@ -26,11 +26,20 @@ impl std::fmt::Display for GameResult {
         }
     }
 }
+impl GameResult {
+    fn eval(&self) -> i32 {
+        match self {
+            GameResult::Draw => 0,
+            GameResult::Winner(color) => 100000 * color.relative_value(),
+        }
+    }
+}
 fn main() {
     let mut board_state = BoardState::new_game();
     let mut total_nodes_evaluated = 0;
     let mut total_prunes = 0;
     let mut moves = 0;
+    print!("{}", board_state.white_bitboard);
     loop {
         if generate_moves(&mut board_state).is_empty() {
             let game_winner = board_state.get_game_winner();

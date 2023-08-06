@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{str::FromStr, io::Empty};
 
 use crate::constants::*;
 use PieceColor::*;
@@ -114,11 +114,40 @@ impl From<Piece> for Square {
         Square::Full(value)
     }
 }
+impl std::fmt::Display for Square {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            Square::Empty => write!(f, " "),
+            Square::Aether => write!(f, "Aether is not meant for printing"),
+            Square::Full(piece) => write!(f, "{}", piece),
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Piece {
     pub color: PieceColor,
     pub kind: PieceKind,
+}
+impl std::fmt::Display for Piece {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let symbol = match (self.color, self.kind) {
+            (White, Pawn) => '♙',
+            (White, Knight) => '♘',
+            (White, Bishop) => '♗',
+            (White, Rook) => '♖',
+            (White, Queen) => '♕',
+            (White, King) => '♔',
+            (Black, Pawn) => '♟',
+            (Black, Knight) => '♞',
+            (Black, Bishop) => '♝',
+            (Black, Rook) => '♜',
+            (Black, Queen) => '♛',
+            (Black, King) => '♚',
+        };
+        write!(f, "{symbol}")
+
+    }
 }
 impl Piece {
     pub fn pawn(color: PieceColor) -> Piece {
@@ -266,6 +295,11 @@ impl BitBoard {
         &mut self.0
     }
 }
+impl std::fmt::Display for BitBoard {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 impl Iterator for BitBoard {
     type Item = ChessCell;
     fn next(&mut self) -> Option<Self::Item> {
@@ -372,14 +406,25 @@ impl From<(ChessCell, ChessCell)> for ChessMove {
 impl From<CastlingType> for ChessMove {
     fn from(value: CastlingType) -> Self {
         let (start, dest) = match value {
-            CastlingType::WhiteKingSide => ((RANK_1, E_FILE), (RANK_1, G_FILE)),
-            CastlingType::WhiteQueenSide => ((RANK_1, E_FILE), (RANK_1, C_FILE)),
-            CastlingType::BlackKingSide => ((RANK_8, E_FILE), (RANK_8, G_FILE)),
-            CastlingType::BlackQueenSide => ((RANK_8, E_FILE), (RANK_8, C_FILE)),
+            CastlingType::WhiteKingSide => (E1, G1),
+            CastlingType::WhiteQueenSide => (E1, C1),
+            CastlingType::BlackKingSide => (E8, G8),
+            CastlingType::BlackQueenSide => (E8, C8),
         };
         ChessMove {
             start: ChessCell::from(start),
             dest: ChessCell::from(dest),
+        }
+    }
+}
+impl From<ChessCell> for CastlingType {
+    fn from(value: ChessCell) -> Self {
+        match value {
+            A1 => CastlingType::WhiteQueenSide,
+            H1 => CastlingType::WhiteKingSide,
+            A8 => CastlingType::BlackQueenSide,
+            H8 => CastlingType::BlackKingSide,
+            _ => unreachable!(),
         }
     }
 }
