@@ -1,9 +1,9 @@
 use crate::board::BoardState;
 use crate::board_elements::ChessMove;
-use crate::move_generation::{generate_moves, generate_pseudo_moves_for_player};
+use crate::move_generation::generate_pseudo_moves_for_player;
 use crate::move_ordering::move_sort;
 pub fn negamax(
-    board_state: &mut BoardState,
+    board_state: &BoardState,
     depth: u8,
     alpha: i32,
     beta: i32,
@@ -35,7 +35,7 @@ pub fn negamax(
     best_eval
 }
 
-pub fn search(board_state: &mut BoardState, depth: u8) -> (i32, Option<ChessMove>, i32, i32) {
+pub fn search(board_state: &BoardState, depth: u8) -> (i32, Option<ChessMove>, i32, i32) {
     let mut alpha = -i32::MAX;
     let beta = i32::MAX;
     let mut best_eval = -i32::MAX;
