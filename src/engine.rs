@@ -1,4 +1,4 @@
-use crate::board::BoardState;
+use crate::board::{BoardState, self};
 use crate::board_elements::ChessMove;
 use crate::move_generation::generate_pseudo_moves_for_player;
 use crate::move_ordering::move_sort;
@@ -12,7 +12,7 @@ pub fn negamax(
 ) -> i32 {
     if depth == 0 {
         *counter += 1;
-        return board_state.eval();
+        return board_state.eval * board_state.to_move.relative_value();
     }
     let mut best_eval = -i32::MAX;
     let mut available_pseudo_moves = generate_pseudo_moves_for_player(board_state);
@@ -24,7 +24,7 @@ pub fn negamax(
         if !copy_board.is_valid_move() {
             continue;
         }
-        let eval = -negamax(&mut copy_board, depth - 1, -beta, -alpha, counter, prunes);
+        let eval = -negamax(&copy_board, depth - 1, -beta, -alpha, counter, prunes);
         let alpha = alpha.max(eval);
         best_eval = eval.max(best_eval);
         if alpha >= beta {
@@ -52,7 +52,7 @@ pub fn search(board_state: &BoardState, depth: u8) -> (i32, Option<ChessMove>, i
             continue;
         }
         let eval = -negamax(
-            &mut copy_board,
+            &copy_board,
             depth - 1,
             -beta,
             -alpha,
@@ -62,7 +62,7 @@ pub fn search(board_state: &BoardState, depth: u8) -> (i32, Option<ChessMove>, i
 
         if eval > best_eval {
             best_eval = eval;
-            best_move = copy_board.last_move();
+            best_move = copy_board.last_move;
         }
         alpha = alpha.max(eval);
     }

@@ -156,12 +156,9 @@ pub struct BoardState {
     pub black_bitboard: BitBoard,
     pub white_king_location: ChessCell,
     pub black_king_location: ChessCell,
-    /*
-    pub en_passant_square: Option<ChessCell>,
-    pub pawn_promotion: Option<ChessCell>,
+    pub last_move: Option<ChessMove>,
+    pub eval: i32,
     pub castling_rights: CastlingRights,
-    */
-    entropy_stack: EntropyStack,
 }
 impl BoardState {
     pub fn empty_game() -> BoardState {
@@ -171,8 +168,7 @@ impl BoardState {
         let black_bitboard = BitBoard(0);
         let white_king_location = ChessCell(100, 100);
         let black_king_location = ChessCell(100, 100);
-        let _en_passant_square: Option<()> = None;
-        let _pawn_promotion: Option<()> = None;
+        let castling_rights = CastlingRights::all_castling_rights();
         let entropy_stack = EntropyStack::new();
         return BoardState {
             board,
@@ -181,7 +177,9 @@ impl BoardState {
             black_bitboard,
             white_king_location,
             black_king_location,
-            entropy_stack,
+            last_move: None,
+            eval: 0,
+            castling_rights
         };
     }
     pub fn new_game() -> BoardState {
@@ -191,7 +189,7 @@ impl BoardState {
         let black_bitboard = BLACK_STARTING_BITBOARD;
         let white_king_location = ChessCell(RANK_1, E_FILE);
         let black_king_location = ChessCell(RANK_8, E_FILE);
-        let _castling_rights = CastlingRights::all_castling_rights();
+        let castling_rights = CastlingRights::all_castling_rights();
         let _en_passant_square: Option<()> = None;
         let _pawn_promotion: Option<()> = None;
         let entropy_stack = EntropyStack::new();
@@ -203,10 +201,11 @@ impl BoardState {
             black_bitboard,
             white_king_location,
             black_king_location,
-            entropy_stack,
-        };
-        board_state.set_eval(evaluate(&board_state));
-        board_state.set_castling_rights(CastlingRights::all_castling_rights());
+            last_move: None,
+            eval: 0,
+            castling_rights
+                };
+        board_state.eval = evaluate(&board_state);
         board_state
     }
     pub fn from_fen(fen: &str) -> Result<BoardState, &str> {
@@ -240,10 +239,11 @@ impl BoardState {
             black_bitboard,
             white_king_location,
             black_king_location,
-            entropy_stack: EntropyStack::new(),
+            last_move: None,
+            eval: 0,
+            castling_rights
         };
-        board_state.set_eval(evaluate(&board_state));
-        board_state.set_castling_rights(castling_rights);
+        board_state.eval = evaluate(&board_state);
         Ok(board_state)
     }
     #[inline]
@@ -253,76 +253,30 @@ impl BoardState {
             Black => self.to_move = White,
         }
     }
-    #[inline]
-    pub fn clear_en_passant_square(&mut self) {
-        //self.en_passant_square = None;
-    }
-    #[inline]
-    pub fn last_move(&self) -> Option<ChessMove> {
-        self.entropy_stack.last_move()
-    }
-    #[inline]
-    pub fn last_capture(&self) -> Option<Piece> {
-        self.entropy_stack.last_capture()
-    }
-    #[inline]
-    pub fn eval(&self) -> i32 {
-        self.entropy_stack.eval() * self.to_move.relative_value()
-    }
-    #[inline]
-    pub fn castling_rights(&self) -> CastlingRights {
-        self.entropy_stack.castling_rights()
-    }
     pub fn available_castling_types(&self, color: PieceColor) -> Vec<CastlingType> {
         let mut castling_types = Vec::new();
         match color {
             White => {
-                if self.castling_rights().white_king_side_castling {
+                if self.castling_rights.white_king_side_castling {
                     castling_types.push(CastlingType::WhiteKingSide)
                 }
-                if self.castling_rights().white_queen_side_castling {
+                if self.castling_rights.white_queen_side_castling {
                     castling_types.push(CastlingType::WhiteQueenSide)
                 }
             }
             Black => {
-                if self.castling_rights().black_king_side_castling {
+                if self.castling_rights.black_king_side_castling {
                     castling_types.push(CastlingType::BlackKingSide)
                 }
-                if self.castling_rights().black_queen_side_castling {
+                if self.castling_rights.black_queen_side_castling {
                     castling_types.push(CastlingType::BlackQueenSide)
                 }
             }
         }
         castling_types
     }
-    #[inline]
-    pub fn set_last_move(&mut self, mov: ChessMove) {
-        self.entropy_stack.set_last_move(mov)
-    }
-    #[inline]
-    pub fn set_last_capture(&mut self, captured_piece: Option<Piece>) {
-        self.entropy_stack.set_last_capture(captured_piece)
-    }
-    pub fn set_eval(&mut self, eval: i32) {
-        self.entropy_stack.top_mut().eval = eval
-    }
     pub fn increment_eval(&mut self, eval_increment: i32) {
-        self.entropy_stack.top_mut().eval += eval_increment * self.to_move.relative_value()
-    }
-    pub fn set_castling_rights(&mut self, castling_rights: CastlingRights) {
-        self.entropy_stack.top_mut().castling_rights = castling_rights
-    }
-    pub fn remove_castling_right(&mut self, castling_type: CastlingType) {
-        self.entropy_stack
-            .top_mut()
-            .castling_rights
-            .remove_castling_right(castling_type)
-    }
-    pub fn remove_color_castling_rights(&mut self, color: PieceColor) {
-        self.entropy_stack
-            .top_mut()
-            .castling_rights
-            .remove_color_castling_rights(color)
+        self.eval += eval_increment * self.to_move.relative_value()
     }
     #[inline]
     fn update_king_position(&mut self, dest: ChessCell) {
@@ -345,12 +299,10 @@ impl BoardState {
     pub fn make_move(&mut self, mov: ChessMove) {
         let start = mov.start;
         let dest = mov.dest;
+        self.last_move = Some(mov);
         let mut eval_increment = 0;
 
         let moving_piece = self.board.square(start).piece().unwrap();
-        let attacked_square = *self.board.square(dest);
-
-        self.entropy_stack.push(mov, attacked_square.piece());
 
         if moving_piece.kind == King {
             self.update_king_position(dest);
@@ -363,12 +315,12 @@ impl BoardState {
         // If a rook moves
         if moving_piece.kind == Rook && matches!(start, A1 | A8 | H1 | H8) {
             self
-                .remove_castling_right(start.into())
+                .castling_rights.remove_castling_right(start.into())
         }
         // If a rook is potentially captured on its starting square
         if matches!(dest, A1 | A8 | H1 | H8) {
             self
-                .remove_castling_right(dest.into())
+                .castling_rights.remove_castling_right(dest.into())
         }
         self.move_piece(mov, &mut eval_increment);
 
@@ -390,60 +342,7 @@ impl BoardState {
             };
             self.move_piece(rook_move, eval_increment);
         self
-            .remove_color_castling_rights(self.to_move);
-    }
-    pub fn unmake_move(&mut self) {
-        self.swap_to_move();
-        let reverse_move = self.last_move().unwrap().reverse();
-        let start = reverse_move.start;
-        let dest = reverse_move.dest;
-        let moving_piece = self.board.square(start).piece().unwrap();
-
-        *self.board.square_mut(start) = Square::Empty;
-
-        *self.board.square_mut(dest) = Square::Full(moving_piece);
-        self.downgrade_bitboards(reverse_move, self.last_capture());
-
-        if let Some(captured_piece) = self.last_capture() {
-            *self.board.square_mut(reverse_move.start) = Square::Full(captured_piece);
-        }
-        if moving_piece.kind == King {
-            match moving_piece.color {
-                White => self.white_king_location = dest,
-                Black => self.black_king_location = dest,
-            }
-            // King moved two squares, must be castle
-            if (start.1 as i8 - dest.1 as i8).abs() == 2 {
-                let starting_rank = match self.to_move {
-                    White => RANK_1,
-                    Black => RANK_8,
-                };
-                // Uncastling the rook
-                let (rook_dest, rook_start) = match start.1 {
-                    C_FILE => (
-                        ChessCell(starting_rank, A_FILE),
-                        ChessCell(starting_rank, D_FILE),
-                    ),
-                    G_FILE => (
-                        ChessCell(starting_rank, H_FILE),
-                        ChessCell(starting_rank, F_FILE),
-                    ),
-                    _ => {
-                        dbg!(reverse_move);
-                        panic!()
-                    }
-                };
-                *self.board.square_mut(rook_dest) = *self.board.square(rook_start);
-                *self.board.square_mut(rook_start) = Square::Empty;
-                let rook_mov = ChessMove {
-                    start: rook_start,
-                    dest: rook_dest,
-                };
-                self.downgrade_bitboards(rook_mov, None);
-            }
-        }
-
-        self.entropy_stack.pop();
+            .castling_rights.remove_color_castling_rights(self.to_move);
     }
     fn update_bitboards(&mut self, mov: ChessMove) {
         let (current_player_bitboard, opposing_player_bitboard) = match self.to_move {
@@ -660,7 +559,6 @@ mod tests {
             new_board_state.pawn_promotion
         );
         */
-        assert_eq!(fen_board_state.entropy_stack, new_board_state.entropy_stack);
     }
     #[test]
     #[should_panic]
@@ -749,33 +647,5 @@ mod tests {
         assert_eq!(white_king_square.is_empty_or_enemy_of(White), false);
         let c6 = board.square(ChessCell(RANK_6, C_FILE));
         assert_eq!(c6.is_empty_or_enemy_of(White), true);
-    }
-    #[test]
-    fn make_unmake_on_new_board_restores_board_state() {
-        let mut board_state = BoardState::new_game();
-        let mov = ChessMove {
-            start: ChessCell(RANK_2, E_FILE),
-            dest: ChessCell(RANK_4, E_FILE),
-        };
-        board_state.make_move(mov);
-        board_state.unmake_move();
-        assert_eq!(board_state, BoardState::new_game())
-    }
-    #[test]
-    fn make_unmake_on_board_with_capture_restores_board_state() {
-        let mut board_state =
-            BoardState::from_fen("rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2")
-                .unwrap();
-        let mov = ChessMove {
-            start: ChessCell(RANK_4, E_FILE),
-            dest: ChessCell(RANK_5, D_FILE),
-        };
-        board_state.make_move(mov);
-        board_state.unmake_move();
-        assert_eq!(
-            board_state,
-            BoardState::from_fen("rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2")
-                .unwrap()
-        )
     }
 }

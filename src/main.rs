@@ -39,7 +39,7 @@ fn main() {
             return;
         }
         let (best_eval, best_move, nodes_evaluated, prunes) =
-            engine::search(&mut board_state, DEPTH);
+            engine::search(&board_state, DEPTH);
         total_nodes_evaluated += nodes_evaluated;
         total_prunes += prunes;
         moves += 1;
