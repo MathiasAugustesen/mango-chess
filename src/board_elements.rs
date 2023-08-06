@@ -417,6 +417,17 @@ impl From<CastlingType> for ChessMove {
         }
     }
 }
+impl From<ChessCell> for CastlingType {
+    fn from(value: ChessCell) -> Self {
+        match value {
+            A1 => CastlingType::WhiteQueenSide,
+            H1 => CastlingType::WhiteKingSide,
+            A8 => CastlingType::BlackQueenSide,
+            H8 => CastlingType::BlackKingSide,
+            _ => unreachable!()
+        }
+    }
+}
 impl ChessMove {
     pub fn reverse(self) -> ChessMove {
         ChessMove {

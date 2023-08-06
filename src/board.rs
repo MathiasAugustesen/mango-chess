@@ -354,74 +354,43 @@ impl BoardState {
 
         if moving_piece.kind == King {
             self.update_king_position(dest);
-            self.remove_color_castling_rights(self.to_move);
-
-            
             // If king moves two squares, must be castle
-            if (start.1 as i8 - dest.1 as i8).abs() == 2 || (start.0 as i8 - dest.0 as i8).abs() == 2 {
-                let starting_rank = match self.to_move {
-                    White => RANK_1,
-                    Black => RANK_8,
-                };
-                let (rook_start, rook_dest) = match dest.1 {
-                    C_FILE => (
-                        ChessCell(starting_rank, A_FILE),
-                        ChessCell(starting_rank, D_FILE),
-                    ),
-                    G_FILE => (
-                        ChessCell(starting_rank, H_FILE),
-                        ChessCell(starting_rank, F_FILE),
-                    ),
-                    _ => unreachable!(),
-                };
-                let rook_mov = ChessMove {
-                    start: rook_start,
-                    dest: rook_dest,
-                };
-                self.move_piece(rook_mov, &mut eval_increment);
+            let move_is_castle = start.1.abs_diff(dest.1) == 2;
+            if move_is_castle {
+                self.resolve_castling(mov, &mut eval_increment);
             }
         }
-        if moving_piece.kind == Rook {
-            match start {
-                A1 => {
-                    self.remove_castling_right(CastlingType::WhiteQueenSide)
-                }
-                H1 => {
-                    self.remove_castling_right(CastlingType::WhiteKingSide)
-                }
-                A8 => {
-                    self.remove_castling_right(CastlingType::BlackQueenSide)
-                }
-                H8 => {
-                    self.remove_castling_right(CastlingType::BlackKingSide)
-                }
-                _ => {}
-            };
+        // If a rook moves
+        if moving_piece.kind == Rook && matches!(start, A1 | A8 | H1 | H8) {
+            self
+                .remove_castling_right(start.into())
         }
-        if let Some(captured_piece) = attacked_square.piece() {
-            if captured_piece.kind == Rook {
-                match dest {
-                    ChessCell(RANK_1, A_FILE) => {
-                        self.remove_castling_right(CastlingType::WhiteQueenSide)
-                    }
-                    ChessCell(RANK_1, H_FILE) => {
-                        self.remove_castling_right(CastlingType::WhiteKingSide)
-                    }
-                    ChessCell(RANK_8, A_FILE) => {
-                        self.remove_castling_right(CastlingType::BlackQueenSide)
-                    }
-                    ChessCell(RANK_8, H_FILE) => {
-                        self.remove_castling_right(CastlingType::BlackKingSide)
-                    }
-                    _ => {}
-                }
-            }
+        // If a rook is potentially captured on its starting square
+        if matches!(dest, A1 | A8 | H1 | H8) {
+            self
+                .remove_castling_right(dest.into())
         }
         self.move_piece(mov, &mut eval_increment);
 
         self.increment_eval(eval_increment);
 
         self.swap_to_move();
+    }
+    fn resolve_castling(&mut self, mov: ChessMove, eval_increment: &mut i32) {
+            let (rook_start, rook_dest) = match mov.dest {
+                G1 => (H1, F1),
+                C1 => (A1, D1),
+                G8 => (H8, F8),
+                C8 => (A8, D8),
+                _ => unreachable!(),
+            };
+            let rook_move = ChessMove {
+                start: rook_start,
+                dest: rook_dest,
+            };
+            self.move_piece(rook_move, eval_increment);
+        self
+            .remove_color_castling_rights(self.to_move);
     }
     pub fn unmake_move(&mut self) {
         self.swap_to_move();
