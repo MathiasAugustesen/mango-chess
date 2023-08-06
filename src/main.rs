@@ -4,7 +4,7 @@ pub mod board_elements;
 pub mod constants;
 pub mod fen;
 pub mod move_generation;
-use board_elements::{CastlingType, ChessCell, PieceColor};
+use board_elements::PieceColor;
 pub mod engine;
 pub mod evaluation;
 pub mod move_ordering;
