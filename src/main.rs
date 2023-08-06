@@ -1,5 +1,6 @@
 use crate::{board::BoardState, move_generation::generate_moves};
 pub mod board;
+pub mod board_elements;
 pub mod constants;
 pub mod fen;
 pub mod move_generation;
@@ -11,46 +12,7 @@ pub mod move_ordering;
 mod ray_attacks;
 const DEPTH: u8 = 5;
 use crate::board::PieceColor::*;
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub struct ChessMove {
-    pub start: ChessCell,
-    pub dest: ChessCell,
-}
-impl std::fmt::Display for ChessMove {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}->{}", self.start, self.dest)
-    }
-}
-impl From<(ChessCell, ChessCell)> for ChessMove {
-    fn from(cells: (ChessCell, ChessCell)) -> ChessMove {
-        ChessMove {
-            start: cells.0,
-            dest: cells.1,
-        }
-    }
-}
-impl From<CastlingType> for ChessMove {
-    fn from(value: CastlingType) -> Self {
-        let (start, dest) = match value {
-            CastlingType::WhiteKingSide => ((RANK_1, E_FILE), (RANK_1, G_FILE)),
-            CastlingType::WhiteQueenSide => ((RANK_1, E_FILE), (RANK_1, C_FILE)),
-            CastlingType::BlackKingSide => ((RANK_8, E_FILE), (RANK_8, G_FILE)),
-            CastlingType::BlackQueenSide => ((RANK_8, E_FILE), (RANK_8, C_FILE)),
-        };
-        ChessMove {
-            start: ChessCell::from(start),
-            dest: ChessCell::from(dest),
-        }
-    }
-}
-impl ChessMove {
-    pub fn reverse(self) -> ChessMove {
-        ChessMove {
-            start: self.dest,
-            dest: self.start,
-        }
-    }
-}
+
 pub enum GameResult {
     Winner(PieceColor),
     Draw,
