@@ -32,6 +32,7 @@ fn main() {
     let mut total_prunes = 0;
     let mut moves = 0;
     loop {
+        println!("{}", board_state.board);
         if generate_moves(&mut board_state).is_empty() {
             let game_winner = board_state.get_game_winner();
             println!("{game_winner}");

@@ -295,6 +295,11 @@ impl BitBoard {
         &mut self.0
     }
 }
+impl std::fmt::Display for BitBoard {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 impl Iterator for BitBoard {
     type Item = ChessCell;
     fn next(&mut self) -> Option<Self::Item> {

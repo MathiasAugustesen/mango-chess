@@ -324,36 +324,41 @@ impl BoardState {
             .castling_rights
             .remove_color_castling_rights(color)
     }
+    #[inline]
+    fn update_king_position(&mut self, dest: ChessCell) {
+        match self.to_move {
+            White => self.white_king_location = dest,
+            Black => self.black_king_location = dest,
+        }
+    }
+    pub fn move_piece(&mut self, mov: ChessMove, eval_increment: &mut i32) {
+        let moving_piece = self.board.square(mov.start).piece().unwrap();
+        if let Some(captured_piece) = self.board.square(mov.dest).piece() {
+            *eval_increment += evaluate_piece(captured_piece, mov.dest.as_index());
+        }
+        *self.board.square_mut(mov.start) = Square::Empty;
+        *self.board.square_mut(mov.dest) = Square::Full(moving_piece);
+        self.update_bitboards(mov);
+        *eval_increment += positional_value_delta(moving_piece, mov);
+
+    }
     pub fn make_move(&mut self, mov: ChessMove) {
         let start = mov.start;
         let dest = mov.dest;
         let mut eval_increment = 0;
 
         let moving_piece = self.board.square(start).piece().unwrap();
-
-        *self.board.square_mut(start) = Square::Empty;
-
-        let attacked_square = self.board.square(dest);
-
-        if let Some(attacked_piece) = attacked_square.piece() {
-            eval_increment += evaluate_piece(attacked_piece, dest.as_index());
-        }
+        let attacked_square = *self.board.square(dest);
 
         self.entropy_stack.push(mov, attacked_square.piece());
 
-        *self.board.square_mut(dest) = Square::Full(moving_piece);
-
-        eval_increment += positional_value_delta(moving_piece, mov);
-
-        self.increment_eval(eval_increment);
-
         if moving_piece.kind == King {
-            match moving_piece.color {
-                White => self.white_king_location = dest,
-                Black => self.black_king_location = dest,
-            }
-            // King moved two squares, must be castle
-            if (start.1 as i8 - dest.1 as i8).abs() == 2 {
+            self.update_king_position(dest);
+            self.remove_color_castling_rights(self.to_move);
+
+            
+            // If king moves two squares, must be castle
+            if (start.1 as i8 - dest.1 as i8).abs() == 2 || (start.0 as i8 - dest.0 as i8).abs() == 2 {
                 let starting_rank = match self.to_move {
                     White => RANK_1,
                     Black => RANK_8,
@@ -369,34 +374,31 @@ impl BoardState {
                     ),
                     _ => unreachable!(),
                 };
-                *self.board.square_mut(rook_dest) = *self.board.square(rook_start);
-                *self.board.square_mut(rook_start) = Square::Empty;
                 let rook_mov = ChessMove {
                     start: rook_start,
                     dest: rook_dest,
                 };
-                self.update_bitboards(rook_mov)
+                self.move_piece(rook_mov, &mut eval_increment);
             }
-            self.remove_color_castling_rights(self.to_move);
         }
         if moving_piece.kind == Rook {
             match start {
-                ChessCell(RANK_1, A_FILE) => {
+                A1 => {
                     self.remove_castling_right(CastlingType::WhiteQueenSide)
                 }
-                ChessCell(RANK_1, H_FILE) => {
+                H1 => {
                     self.remove_castling_right(CastlingType::WhiteKingSide)
                 }
-                ChessCell(RANK_8, A_FILE) => {
+                A8 => {
                     self.remove_castling_right(CastlingType::BlackQueenSide)
                 }
-                ChessCell(RANK_8, H_FILE) => {
+                H8 => {
                     self.remove_castling_right(CastlingType::BlackKingSide)
                 }
                 _ => {}
             };
         }
-        if let Some(captured_piece) = self.board.square(dest).piece() {
+        if let Some(captured_piece) = attacked_square.piece() {
             if captured_piece.kind == Rook {
                 match dest {
                     ChessCell(RANK_1, A_FILE) => {
@@ -415,8 +417,9 @@ impl BoardState {
                 }
             }
         }
+        self.move_piece(mov, &mut eval_increment);
 
-        self.update_bitboards(mov);
+        self.increment_eval(eval_increment);
 
         self.swap_to_move();
     }
@@ -575,6 +578,11 @@ impl BoardState {
         for attacker in self.get_piece_positions(color) {
             let attacker_idx = attacker.as_index();
             let attacking_square = self.board.square(attacker);
+            if !attacking_square.has_piece() {
+                print!("{}", self.board);
+                print!("White bb: {}\n black bb: {}", self.white_bitboard, self.black_bitboard);
+                println!("{:?}", self);
+            }
             let attacking_piece = attacking_square.piece().unwrap();
             let attacked_squares = match (attacking_piece.color, attacking_piece.kind) {
                 (White, Pawn) => WHITE_PAWN_RAY_ATTACKS[attacker_idx],
