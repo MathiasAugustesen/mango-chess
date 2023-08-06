@@ -1,4 +1,4 @@
-use crate::board::{BoardState, self};
+use crate::board::BoardState;
 use crate::board_elements::ChessMove;
 use crate::move_generation::generate_pseudo_moves_for_player;
 use crate::move_ordering::move_sort;

@@ -18,74 +18,6 @@ use crate::move_generation::generate_pseudo_moves_for_piece;
 use crate::move_ordering::positional_value_delta;
 use crate::ray_attacks::*;
 use crate::GameResult;
-#[derive(Debug, Clone, PartialEq)]
-struct EntropyStack {
-    stack: Vec<MoveEntropy>,
-}
-impl EntropyStack {
-    pub fn new() -> EntropyStack {
-        EntropyStack {
-            stack: vec![MoveEntropy::default()],
-        }
-    }
-    pub fn pop(&mut self) -> MoveEntropy {
-        self.stack.pop().expect("Tried to unmake unexisting move")
-    }
-    pub fn top(&self) -> MoveEntropy {
-        *self.stack.last().unwrap()
-    }
-    pub fn top_mut(&mut self) -> &mut MoveEntropy {
-        self.stack.last_mut().unwrap()
-    }
-    pub fn last_move(&self) -> Option<ChessMove> {
-        self.top().last_move
-    }
-    pub fn last_capture(&self) -> Option<Piece> {
-        self.top().last_capture
-    }
-    pub fn eval(&self) -> i32 {
-        self.top().eval
-    }
-    pub fn castling_rights(&self) -> CastlingRights {
-        self.top().castling_rights
-    }
-    pub fn set_last_move(&mut self, mov: ChessMove) {
-        self.top_mut().last_move = Some(mov);
-    }
-    pub fn set_last_capture(&mut self, captured_piece: Option<Piece>) {
-        self.top_mut().last_capture = captured_piece
-    }
-    pub fn push(&mut self, mov: ChessMove, capture: Option<Piece>) {
-        self.stack.push(MoveEntropy::new(
-            mov,
-            capture,
-            self.eval(),
-            self.castling_rights(),
-        ))
-    }
-}
-#[derive(Default, Debug, Clone, Copy, PartialEq)]
-struct MoveEntropy {
-    pub last_move: Option<ChessMove>,
-    pub last_capture: Option<Piece>,
-    pub eval: i32,
-    pub castling_rights: CastlingRights,
-}
-impl MoveEntropy {
-    pub fn new(
-        mov: ChessMove,
-        capture: Option<Piece>,
-        eval: i32,
-        castling_rights: CastlingRights,
-    ) -> MoveEntropy {
-        MoveEntropy {
-            last_move: Some(mov),
-            last_capture: capture,
-            eval,
-            castling_rights,
-        }
-    }
-}
 #[derive(Clone, PartialEq, Debug)]
 pub struct ChessBoard([Square; 144]);
 impl std::fmt::Display for ChessBoard {
@@ -169,7 +101,6 @@ impl BoardState {
         let white_king_location = ChessCell(100, 100);
         let black_king_location = ChessCell(100, 100);
         let castling_rights = CastlingRights::all_castling_rights();
-        let entropy_stack = EntropyStack::new();
         return BoardState {
             board,
             to_move,
@@ -192,8 +123,6 @@ impl BoardState {
         let castling_rights = CastlingRights::all_castling_rights();
         let _en_passant_square: Option<()> = None;
         let _pawn_promotion: Option<()> = None;
-        let entropy_stack = EntropyStack::new();
-
         let mut board_state = BoardState {
             board,
             to_move,
