@@ -56,7 +56,7 @@ pub fn generate_pseudo_moves_for_player(board_state: &BoardState) -> Vec<ChessMo
         let piece = board_state.board.square(position).piece().unwrap();
         generate_pseudo_moves_for_piece(piece, board_state, position, &mut potential_moves);
     }
-    // potential_moves.extend(generate_castling_moves(board_state));
+    potential_moves.extend(generate_castling_moves(board_state));
     potential_moves
 }
 pub fn generate_pseudo_moves_for_piece(

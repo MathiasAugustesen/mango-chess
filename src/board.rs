@@ -93,88 +93,7 @@ pub struct BoardState {
     pub castling_rights: CastlingRights,
 }
 impl BoardState {
-    pub fn empty_game() -> BoardState {
-        let board = ChessBoard::empty();
-        let to_move = White;
-        let white_bitboard = BitBoard(0);
-        let black_bitboard = BitBoard(0);
-        let white_king_location = ChessCell(100, 100);
-        let black_king_location = ChessCell(100, 100);
-        let castling_rights = CastlingRights::all_castling_rights();
-        return BoardState {
-            board,
-            to_move,
-            white_bitboard,
-            black_bitboard,
-            white_king_location,
-            black_king_location,
-            last_move: None,
-            eval: 0,
-            castling_rights
-        };
-    }
-    pub fn new_game() -> BoardState {
-        let board = ChessBoard::new();
-        let to_move = White;
-        let white_bitboard = WHITE_STARTING_BITBOARD;
-        let black_bitboard = BLACK_STARTING_BITBOARD;
-        let white_king_location = ChessCell(RANK_1, E_FILE);
-        let black_king_location = ChessCell(RANK_8, E_FILE);
-        let castling_rights = CastlingRights::all_castling_rights();
-        let _en_passant_square: Option<()> = None;
-        let _pawn_promotion: Option<()> = None;
-        let mut board_state = BoardState {
-            board,
-            to_move,
-            white_bitboard,
-            black_bitboard,
-            white_king_location,
-            black_king_location,
-            last_move: None,
-            eval: 0,
-            castling_rights
-                };
-        board_state.eval = evaluate(&board_state);
-        board_state
-    }
-    pub fn from_fen(fen: &str) -> Result<BoardState, &str> {
-        let fen_parts: Vec<&str> = fen.split_ascii_whitespace().collect();
-        if fen_parts.len() != 6 {
-            return Err("Failed to parse FEN string: FEN string did not have length 6");
-        }
-        let fen_board = fen_parts[0];
-        let board = fen::board_from_fen(fen_board)?;
-        let (white_king_location, black_king_location) = find_kings(&board)?;
-        let fen_to_move = fen_parts[1];
-        let to_move = fen::to_move_from_fen(fen_to_move)?;
-        let fen_castling_rights = fen_parts[2];
-        let castling_rights = castling_rights_from_fen(fen_castling_rights)?;
-        let fen_en_passant_square = fen_parts[3];
-        let _en_passant_square = en_passant_square_from_fen(fen_en_passant_square)?;
-        let _halfmove_clock = fen_parts[4];
-        let _fullmove_clock = fen_parts[5];
-        if white_king_location.0 > BOARD_END
-            || white_king_location.1 > BOARD_END
-            || black_king_location.0 > BOARD_END
-            || black_king_location.1 > BOARD_END
-        {
-            return Err("Failed to parse FEN string: Both kings were not on the board");
-        }
-        let (white_bitboard, black_bitboard) = get_bitboards(&board);
-        let mut board_state = BoardState {
-            board,
-            to_move,
-            white_bitboard,
-            black_bitboard,
-            white_king_location,
-            black_king_location,
-            last_move: None,
-            eval: 0,
-            castling_rights
-        };
-        board_state.eval = evaluate(&board_state);
-        Ok(board_state)
-    }
+    
     #[inline]
     pub fn swap_to_move(&mut self) {
         match self.to_move {
@@ -234,6 +153,8 @@ impl BoardState {
         let moving_piece = self.board.square(start).piece().unwrap();
 
         if moving_piece.kind == King {
+            self
+            .castling_rights.remove_color_castling_rights(self.to_move);
             self.update_king_position(dest);
             // If king moves two squares, must be castle
             let move_is_castle = start.1.abs_diff(dest.1) == 2;
@@ -270,8 +191,7 @@ impl BoardState {
                 dest: rook_dest,
             };
             self.move_piece(rook_move, eval_increment);
-        self
-            .castling_rights.remove_color_castling_rights(self.to_move);
+
     }
     fn update_bitboards(&mut self, mov: ChessMove) {
         let (current_player_bitboard, opposing_player_bitboard) = match self.to_move {
@@ -395,6 +315,88 @@ impl BoardState {
             }
         }
         ray_attackers
+    }
+    pub fn empty_game() -> BoardState {
+        let board = ChessBoard::empty();
+        let to_move = White;
+        let white_bitboard = BitBoard(0);
+        let black_bitboard = BitBoard(0);
+        let white_king_location = ChessCell(100, 100);
+        let black_king_location = ChessCell(100, 100);
+        let castling_rights = CastlingRights::all_castling_rights();
+        return BoardState {
+            board,
+            to_move,
+            white_bitboard,
+            black_bitboard,
+            white_king_location,
+            black_king_location,
+            last_move: None,
+            eval: 0,
+            castling_rights
+        };
+    }
+    pub fn new_game() -> BoardState {
+        let board = ChessBoard::new();
+        let to_move = White;
+        let white_bitboard = WHITE_STARTING_BITBOARD;
+        let black_bitboard = BLACK_STARTING_BITBOARD;
+        let white_king_location = ChessCell(RANK_1, E_FILE);
+        let black_king_location = ChessCell(RANK_8, E_FILE);
+        let castling_rights = CastlingRights::all_castling_rights();
+        let _en_passant_square: Option<()> = None;
+        let _pawn_promotion: Option<()> = None;
+        let mut board_state = BoardState {
+            board,
+            to_move,
+            white_bitboard,
+            black_bitboard,
+            white_king_location,
+            black_king_location,
+            last_move: None,
+            eval: 0,
+            castling_rights
+                };
+        board_state.eval = evaluate(&board_state);
+        board_state
+    }
+    pub fn from_fen(fen: &str) -> Result<BoardState, &str> {
+        let fen_parts: Vec<&str> = fen.split_ascii_whitespace().collect();
+        if fen_parts.len() != 6 {
+            return Err("Failed to parse FEN string: FEN string did not have length 6");
+        }
+        let fen_board = fen_parts[0];
+        let board = fen::board_from_fen(fen_board)?;
+        let (white_king_location, black_king_location) = find_kings(&board)?;
+        let fen_to_move = fen_parts[1];
+        let to_move = fen::to_move_from_fen(fen_to_move)?;
+        let fen_castling_rights = fen_parts[2];
+        let castling_rights = castling_rights_from_fen(fen_castling_rights)?;
+        let fen_en_passant_square = fen_parts[3];
+        let _en_passant_square = en_passant_square_from_fen(fen_en_passant_square)?;
+        let _halfmove_clock = fen_parts[4];
+        let _fullmove_clock = fen_parts[5];
+        if white_king_location.0 > BOARD_END
+            || white_king_location.1 > BOARD_END
+            || black_king_location.0 > BOARD_END
+            || black_king_location.1 > BOARD_END
+        {
+            return Err("Failed to parse FEN string: Both kings were not on the board");
+        }
+        let (white_bitboard, black_bitboard) = get_bitboards(&board);
+        let mut board_state = BoardState {
+            board,
+            to_move,
+            white_bitboard,
+            black_bitboard,
+            white_king_location,
+            black_king_location,
+            last_move: None,
+            eval: 0,
+            castling_rights
+        };
+        board_state.eval = evaluate(&board_state);
+        Ok(board_state)
     }
 }
 

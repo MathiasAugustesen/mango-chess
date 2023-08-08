@@ -5,6 +5,12 @@ use crate::{
 };
 
 pub fn move_sort(board_state: &BoardState, mov: ChessMove) -> i32 {
+    if board_state.board.square(mov.start).piece().is_none() {
+        println!("castling rights: {:?}", board_state.castling_rights);
+        println!("White bb: {}\n Black bb: {}", board_state.white_bitboard, board_state.black_bitboard);
+        println!("{}", mov);
+        println!("{}", board_state.board)
+    }
     let moving_piece = board_state.board.square(mov.start).piece().unwrap();
 
     let mut move_score = positional_value_delta(moving_piece, mov);
