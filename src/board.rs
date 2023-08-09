@@ -484,9 +484,6 @@ fn find_kings(board: &ChessBoard) -> Result<(ChessCell, ChessCell), &'static str
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
-
-    use crate::move_generation::generate_moves;
-
     use super::*;
     #[test]
     fn parse_chess_cell_from_valid_str_succeeds() {
@@ -613,7 +610,7 @@ mod tests {
         }
     }
     #[test]
-    fn is_empty_or_enemy_of_works() {
+    fn is_empty_or_enemy_of_tests() {
         let board_state = BoardState::new_game();
         let board = board_state.board;
         let white_king_square = board.square(ChessCell(RANK_1, E_FILE));
