@@ -23,10 +23,16 @@ impl PieceColor {
             Black => White,
         }
     }
-    pub fn relative_value(self) -> i32 {
+    pub fn signum(self) -> i32 {
         match self {
             White => 1,
             Black => -1,
+        }
+    }
+    pub fn en_passant_rank(self) -> usize {
+        match self {
+            White => RANK_3,
+            Black => RANK_6,
         }
     }
 }
@@ -393,6 +399,11 @@ pub struct ChessMove {
 impl std::fmt::Display for ChessMove {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}->{}", self.start, self.dest)
+    }
+}
+pub fn display_moves(moves: &[ChessMove]) {
+    for mov in moves {
+        print!("{}, ", mov);
     }
 }
 impl From<(ChessCell, ChessCell)> for ChessMove {

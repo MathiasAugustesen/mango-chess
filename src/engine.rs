@@ -12,7 +12,7 @@ pub fn negamax(
 ) -> i32 {
     if depth == 0 {
         *counter += 1;
-        return board_state.eval * board_state.to_move.relative_value();
+        return board_state.eval * board_state.to_move.signum();
     }
     let mut best_eval = -i32::MAX;
     let mut available_pseudo_moves = generate_pseudo_moves_for_player(board_state);

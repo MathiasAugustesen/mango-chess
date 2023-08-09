@@ -89,6 +89,7 @@ pub struct BoardState {
     pub white_king_location: ChessCell,
     pub black_king_location: ChessCell,
     pub last_move: Option<ChessMove>,
+    pub en_passant: Option<ChessCell>,
     pub eval: i32,
     pub castling_rights: CastlingRights,
 }
@@ -124,7 +125,7 @@ impl BoardState {
         castling_types
     }
     pub fn increment_eval(&mut self, eval_increment: i32) {
-        self.eval += eval_increment * self.to_move.relative_value()
+        self.eval += eval_increment * self.to_move.signum()
     }
     #[inline]
     fn update_king_position(&mut self, dest: ChessCell) {
@@ -132,6 +133,18 @@ impl BoardState {
             White => self.white_king_location = dest,
             Black => self.black_king_location = dest,
         }
+    }
+    pub fn kill_en_passant_piece(&mut self, square: ChessCell, eval_increment: &mut i32) {
+        println!("{}", self.board);
+        if let Some(ep) = self.en_passant {
+            println!("{}", ep);
+        }
+        dbg!(square);
+
+        let trespasser = self.board.square(square).piece().unwrap();
+        *eval_increment += evaluate_piece(trespasser, square.as_index());
+        *self.board.square_mut(square) = Square::Empty;
+        self.remove_from_bitboard(square);
     }
     pub fn move_piece(&mut self, mov: ChessMove, eval_increment: &mut i32) {
         let moving_piece = self.board.square(mov.start).piece().unwrap();
@@ -172,6 +185,24 @@ impl BoardState {
             self
                 .castling_rights.remove_castling_right(dest.into())
         }
+        // Check if it was an en passant capture
+        if Some(dest) == self.en_passant && moving_piece.kind == Pawn && start.1.abs_diff(dest.1) == 1  {
+            print!("dest: {dest}\nep: {}", self.en_passant.unwrap());
+            
+                let en_passant_capture = ChessCell(start.0, dest.1);
+                self.kill_en_passant_piece(en_passant_capture, &mut eval_increment);
+        }
+
+        // Reset en passant
+        self.en_passant = None;
+
+        // Initialize possible en passant
+        if moving_piece.kind == Pawn && start.0.abs_diff(dest.0) == 2 {
+            let ep_rank = self.to_move.en_passant_rank();
+                let en_passant_square = ChessCell(ep_rank, dest.1);
+                self.en_passant = Some(en_passant_square);
+        }
+
         self.move_piece(mov, &mut eval_increment);
 
         self.increment_eval(eval_increment);
@@ -192,6 +223,13 @@ impl BoardState {
             };
             self.move_piece(rook_move, eval_increment);
 
+    }
+    fn remove_from_bitboard(&mut self, square: ChessCell) {
+        let opposing_player_bitboard = match self.to_move {
+            White => &mut self.black_bitboard,
+            Black => &mut self.white_bitboard,
+        };
+        opposing_player_bitboard.remove_piece(square.as_index());
     }
     fn update_bitboards(&mut self, mov: ChessMove) {
         let (current_player_bitboard, opposing_player_bitboard) = match self.to_move {
@@ -332,6 +370,7 @@ impl BoardState {
             white_king_location,
             black_king_location,
             last_move: None,
+            en_passant: None,
             eval: 0,
             castling_rights
         };
@@ -354,6 +393,7 @@ impl BoardState {
             white_king_location,
             black_king_location,
             last_move: None,
+            en_passant: None,
             eval: 0,
             castling_rights
                 };
@@ -392,6 +432,7 @@ impl BoardState {
             white_king_location,
             black_king_location,
             last_move: None,
+            en_passant: None,
             eval: 0,
             castling_rights
         };
@@ -443,6 +484,8 @@ fn find_kings(board: &ChessBoard) -> Result<(ChessCell, ChessCell), &'static str
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
+
+    use crate::move_generation::generate_moves;
 
     use super::*;
     #[test]
