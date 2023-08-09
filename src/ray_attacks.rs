@@ -1,9 +1,9 @@
 use crate::board::BoardState;
-use crate::board::PieceColor::*;
-use crate::board::{PieceKind, PieceKind::*};
+use crate::board_elements::ChessMove;
+use crate::board_elements::PieceColor::*;
+use crate::board_elements::{PieceKind, PieceKind::*};
 use crate::move_generation::*;
-use crate::ChessMove;
-use crate::{board::ChessCell, constants::*};
+use crate::{board_elements::ChessCell, constants::*};
 pub fn _generate_big_piece_ray_attacks(kind: PieceKind) -> Vec<Vec<usize>> {
     let board_state = BoardState::empty_game();
     let mut ray_attack_lookup: Vec<Vec<usize>> = Vec::new();

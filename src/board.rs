@@ -1,3 +1,13 @@
+use crate::board_elements::BitBoard;
+use crate::board_elements::CastlingRights;
+use crate::board_elements::CastlingType;
+use crate::board_elements::ChessCell;
+use crate::board_elements::ChessMove;
+use crate::board_elements::Piece;
+use crate::board_elements::PieceColor;
+use crate::board_elements::PieceColor::*;
+use crate::board_elements::PieceKind::*;
+use crate::board_elements::Square;
 use crate::constants::*;
 use crate::evaluation::evaluate;
 use crate::evaluation::evaluate_piece;
@@ -7,362 +17,20 @@ use crate::fen::en_passant_square_from_fen;
 use crate::move_generation::generate_pseudo_moves_for_piece;
 use crate::move_ordering::positional_value_delta;
 use crate::ray_attacks::*;
-use crate::ChessMove;
 use crate::GameResult;
-use std::str::FromStr;
-use PieceColor::*;
-use PieceKind::*;
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum PieceColor {
-    White,
-    Black,
-}
-impl std::fmt::Display for PieceColor {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            White => write!(f, "white"),
-            Black => write!(f, "black"),
-        }
-    }
-}
-impl PieceColor {
-    pub fn opposite(self) -> PieceColor {
-        match self {
-            White => Black,
-            Black => White,
-        }
-    }
-    pub fn relative_value(self) -> i32 {
-        match self {
-            White => 1,
-            Black => -1,
-        }
-    }
-}
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum PieceKind {
-    Pawn,
-    Knight,
-    Bishop,
-    Rook,
-    Queen,
-    King,
-}
-impl PieceKind {
-    pub const fn index(self) -> usize {
-        match self {
-            Pawn => 0,
-            Knight => 1,
-            Bishop => 2,
-            Rook => 3,
-            Queen => 4,
-            King => 5,
-        }
-    }
-}
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Square {
-    Empty,
-    Full(Piece),
-    Aether,
-}
-impl Square {
-    pub fn is_aether(self) -> bool {
-        self == Square::Aether
-    }
-    pub fn is_inside_board(self) -> bool {
-        self != Square::Aether
-    }
-    pub fn is_empty(self) -> bool {
-        self == Square::Empty
-    }
-    pub fn is_color(self, color: PieceColor) -> bool {
-        match self {
-            Square::Full(Piece {
-                color: square_color,
-                ..
-            }) => color == square_color,
-            _ => false,
-        }
-    }
-    pub fn is_enemy_of(self, color: PieceColor) -> bool {
-        match self {
-            Square::Full(Piece {
-                color: square_color,
-                ..
-            }) => color != square_color,
-            _ => false,
-        }
-    }
-    pub fn has_piece(self) -> bool {
-        match self {
-            Square::Full(_) => true,
-            _ => false,
-        }
-    }
-    pub fn is_empty_or_enemy_of(self, color: PieceColor) -> bool {
-        match self {
-            Square::Full(Piece {
-                color: square_color,
-                ..
-            }) => color != square_color,
-            Square::Empty => true,
-            _ => false,
-        }
-    }
-    pub fn piece(self) -> Option<Piece> {
-        match self {
-            Square::Full(piece) => Some(piece),
-            Square::Empty => None,
-            Square::Aether => panic!("Tried to access piece from Aether"),
-        }
-    }
-}
-impl From<Piece> for Square {
-    fn from(value: Piece) -> Self {
-        Square::Full(value)
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Piece {
-    color: PieceColor,
-    kind: PieceKind,
-}
-impl Piece {
-    pub fn color(self) -> PieceColor {
-        self.color
-    }
-    pub fn kind(self) -> PieceKind {
-        self.kind
-    }
-    fn pawn(color: PieceColor) -> Piece {
-        Piece { color, kind: Pawn }
-    }
-    fn knight(color: PieceColor) -> Piece {
-        Piece {
-            color,
-            kind: Knight,
-        }
-    }
-    fn bishop(color: PieceColor) -> Piece {
-        Piece {
-            color,
-            kind: Bishop,
-        }
-    }
-    fn rook(color: PieceColor) -> Piece {
-        Piece { color, kind: Rook }
-    }
-    fn queen(color: PieceColor) -> Piece {
-        Piece { color, kind: Queen }
-    }
-    fn king(color: PieceColor) -> Piece {
-        Piece { color, kind: King }
-    }
-    #[inline]
-    pub fn index(self) -> usize {
-        self.kind.index()
-    }
-    pub fn value(self) -> i32 {
-        match self.kind {
-            Pawn => 100,
-            Knight => 300,
-            Bishop => 325,
-            Rook => 500,
-            Queen => 900,
-            King => 10000,
-        }
-    }
-}
-impl TryFrom<char> for Piece {
-    type Error = &'static str;
-    fn try_from(value: char) -> Result<Self, Self::Error> {
-        let color = match value.is_lowercase() {
-            true => Black,
-            false => White,
-        };
-        let piece = match value.to_ascii_lowercase() {
-            'p' => Piece::pawn(color),
-            'n' => Piece::knight(color),
-            'b' => Piece::bishop(color),
-            'r' => Piece::rook(color),
-            'q' => Piece::queen(color),
-            'k' => Piece::king(color),
-            _ => return Err("Character is not a valid chess piece"),
-        };
-        Ok(piece)
-    }
-}
-#[derive(Debug, Clone, Copy)]
-pub enum CastlingType {
-    WhiteKingSide,
-    WhiteQueenSide,
-    BlackKingSide,
-    BlackQueenSide,
-}
-impl CastlingType {
-    pub fn color_king_side(color: PieceColor) -> CastlingType {
-        match color {
-            White => CastlingType::WhiteKingSide,
-            Black => CastlingType::BlackKingSide,
-        }
-    }
-    pub fn color_queen_side(color: PieceColor) -> CastlingType {
-        match color {
-            White => CastlingType::WhiteQueenSide,
-            Black => CastlingType::BlackQueenSide,
-        }
-    }
-    pub fn direction(self) -> i8 {
-        match self {
-            CastlingType::WhiteKingSide | CastlingType::BlackKingSide => 1,
-            CastlingType::WhiteQueenSide | CastlingType::BlackQueenSide => -1,
-        }
-    }
-}
-#[derive(Default, Clone, PartialEq, Debug, Copy)]
-pub struct CastlingRights {
-    pub white_king_side_castling: bool,
-    pub white_queen_side_castling: bool,
-    pub black_king_side_castling: bool,
-    pub black_queen_side_castling: bool,
-}
-impl CastlingRights {
-    pub fn no_castling_rights() -> CastlingRights {
-        CastlingRights {
-            white_king_side_castling: false,
-            white_queen_side_castling: false,
-            black_king_side_castling: false,
-            black_queen_side_castling: false,
-        }
-    }
-    pub fn all_castling_rights() -> CastlingRights {
-        CastlingRights {
-            white_king_side_castling: true,
-            white_queen_side_castling: true,
-            black_king_side_castling: true,
-            black_queen_side_castling: true,
-        }
-    }
-    pub fn remove_castling_right(&mut self, castling_type: CastlingType) {
-        match castling_type {
-            CastlingType::WhiteKingSide => self.white_king_side_castling = false,
-            CastlingType::WhiteQueenSide => self.white_queen_side_castling = false,
-            CastlingType::BlackKingSide => self.black_king_side_castling = false,
-            CastlingType::BlackQueenSide => self.black_queen_side_castling = false,
-        }
-    }
-    pub fn remove_color_castling_rights(&mut self, color: PieceColor) {
-        match color {
-            White => {
-                self.white_king_side_castling = false;
-                self.white_queen_side_castling = false;
-            }
-            Black => {
-                self.black_king_side_castling = false;
-                self.black_queen_side_castling = false;
-            }
-        }
-    }
-}
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct BitBoard(pub u64);
-impl BitBoard {
-    pub fn remove_piece(&mut self, index: usize) {
-        let mask = !(1 << index);
-        self.0 &= mask;
-    }
-    pub fn add_piece(&mut self, index: usize) {
-        let mask = 1 << index;
-        self.0 |= mask;
-    }
-    pub fn bits_mut(&mut self) -> &mut u64 {
-        &mut self.0
-    }
-}
-impl Iterator for BitBoard {
-    type Item = ChessCell;
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.0 == 0 {
-            return None;
-        }
-        let position = self.0.leading_zeros() as usize;
-        let cell = ChessCell::from_index(position);
-        self.0 ^= 1 << position;
-        Some(cell)
-    }
-}
-#[derive(Debug, Clone, PartialEq)]
-struct EntropyStack {
-    stack: Vec<MoveEntropy>,
-}
-impl EntropyStack {
-    pub fn new() -> EntropyStack {
-        EntropyStack {
-            stack: vec![MoveEntropy::default()],
-        }
-    }
-    pub fn pop(&mut self) -> MoveEntropy {
-        self.stack.pop().expect("Tried to unmake unexisting move")
-    }
-    pub fn top(&self) -> MoveEntropy {
-        *self.stack.last().unwrap()
-    }
-    pub fn top_mut(&mut self) -> &mut MoveEntropy {
-        self.stack.last_mut().unwrap()
-    }
-    pub fn last_move(&self) -> Option<ChessMove> {
-        self.top().last_move
-    }
-    pub fn last_capture(&self) -> Option<Piece> {
-        self.top().last_capture
-    }
-    pub fn eval(&self) -> i32 {
-        self.top().eval
-    }
-    pub fn castling_rights(&self) -> CastlingRights {
-        self.top().castling_rights
-    }
-    pub fn set_last_move(&mut self, mov: ChessMove) {
-        self.top_mut().last_move = Some(mov);
-    }
-    pub fn set_last_capture(&mut self, captured_piece: Option<Piece>) {
-        self.top_mut().last_capture = captured_piece
-    }
-    pub fn push(&mut self, mov: ChessMove, capture: Option<Piece>) {
-        self.stack.push(MoveEntropy::new(
-            mov,
-            capture,
-            self.eval(),
-            self.castling_rights(),
-        ))
-    }
-}
-#[derive(Default, Debug, Clone, Copy, PartialEq)]
-struct MoveEntropy {
-    pub last_move: Option<ChessMove>,
-    pub last_capture: Option<Piece>,
-    pub eval: i32,
-    pub castling_rights: CastlingRights,
-}
-impl MoveEntropy {
-    pub fn new(
-        mov: ChessMove,
-        capture: Option<Piece>,
-        eval: i32,
-        castling_rights: CastlingRights,
-    ) -> MoveEntropy {
-        MoveEntropy {
-            last_move: Some(mov),
-            last_capture: capture,
-            eval,
-            castling_rights,
-        }
-    }
-}
 #[derive(Clone, PartialEq, Debug)]
 pub struct ChessBoard([Square; 144]);
+impl std::fmt::Display for ChessBoard {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for rank in (BOARD_START..=BOARD_END).rev() {
+            writeln!(f)?;
+            for file in BOARD_START..=BOARD_END {
+                write!(f, "{} ", self.square(ChessCell(rank, file)))?
+            }
+        }
+        Ok(())
+    }
+}
 impl ChessBoard {
     #[inline]
     pub fn square(&self, square: ChessCell) -> &Square {
@@ -420,96 +88,12 @@ pub struct BoardState {
     pub black_bitboard: BitBoard,
     pub white_king_location: ChessCell,
     pub black_king_location: ChessCell,
-    /*
-    pub en_passant_square: Option<ChessCell>,
-    pub pawn_promotion: Option<ChessCell>,
+    pub last_move: Option<ChessMove>,
+    pub eval: i32,
     pub castling_rights: CastlingRights,
-    */
-    entropy_stack: EntropyStack,
 }
 impl BoardState {
-    pub fn empty_game() -> BoardState {
-        let board = ChessBoard::empty();
-        let to_move = White;
-        let white_bitboard = BitBoard(0);
-        let black_bitboard = BitBoard(0);
-        let white_king_location = ChessCell(100, 100);
-        let black_king_location = ChessCell(100, 100);
-        let _en_passant_square: Option<()> = None;
-        let _pawn_promotion: Option<()> = None;
-        let entropy_stack = EntropyStack::new();
-        return BoardState {
-            board,
-            to_move,
-            white_bitboard,
-            black_bitboard,
-            white_king_location,
-            black_king_location,
-            entropy_stack,
-        };
-    }
-    pub fn new_game() -> BoardState {
-        let board = ChessBoard::new();
-        let to_move = White;
-        let white_bitboard = WHITE_STARTING_BITBOARD;
-        let black_bitboard = BLACK_STARTING_BITBOARD;
-        let white_king_location = ChessCell(RANK_1, E_FILE);
-        let black_king_location = ChessCell(RANK_8, E_FILE);
-        let _castling_rights = CastlingRights::all_castling_rights();
-        let _en_passant_square: Option<()> = None;
-        let _pawn_promotion: Option<()> = None;
-        let entropy_stack = EntropyStack::new();
-
-        let mut board_state = BoardState {
-            board,
-            to_move,
-            white_bitboard,
-            black_bitboard,
-            white_king_location,
-            black_king_location,
-            entropy_stack,
-        };
-        board_state.set_eval(evaluate(&board_state));
-        board_state.set_castling_rights(CastlingRights::all_castling_rights());
-        board_state
-    }
-    pub fn from_fen(fen: &str) -> Result<BoardState, &str> {
-        let fen_parts: Vec<&str> = fen.split_ascii_whitespace().collect();
-        if fen_parts.len() != 6 {
-            return Err("Failed to parse FEN string: FEN string did not have length 6");
-        }
-        let fen_board = fen_parts[0];
-        let board = fen::board_from_fen(fen_board)?;
-        let (white_king_location, black_king_location) = find_kings(&board)?;
-        let fen_to_move = fen_parts[1];
-        let to_move = fen::to_move_from_fen(fen_to_move)?;
-        let fen_castling_rights = fen_parts[2];
-        let castling_rights = castling_rights_from_fen(fen_castling_rights)?;
-        let fen_en_passant_square = fen_parts[3];
-        let _en_passant_square = en_passant_square_from_fen(fen_en_passant_square)?;
-        let _halfmove_clock = fen_parts[4];
-        let _fullmove_clock = fen_parts[5];
-        if white_king_location.0 > BOARD_END
-            || white_king_location.1 > BOARD_END
-            || black_king_location.0 > BOARD_END
-            || black_king_location.1 > BOARD_END
-        {
-            return Err("Failed to parse FEN string: Both kings were not on the board");
-        }
-        let (white_bitboard, black_bitboard) = get_bitboards(&board);
-        let mut board_state = BoardState {
-            board,
-            to_move,
-            white_bitboard,
-            black_bitboard,
-            white_king_location,
-            black_king_location,
-            entropy_stack: EntropyStack::new(),
-        };
-        board_state.set_eval(evaluate(&board_state));
-        board_state.set_castling_rights(castling_rights);
-        Ok(board_state)
-    }
+    
     #[inline]
     pub fn swap_to_move(&mut self) {
         match self.to_move {
@@ -517,188 +101,97 @@ impl BoardState {
             Black => self.to_move = White,
         }
     }
-    #[inline]
-    pub fn clear_en_passant_square(&mut self) {
-        //self.en_passant_square = None;
-    }
-    #[inline]
-    pub fn last_move(&self) -> Option<ChessMove> {
-        self.entropy_stack.last_move()
-    }
-    #[inline]
-    pub fn last_capture(&self) -> Option<Piece> {
-        self.entropy_stack.last_capture()
-    }
-    #[inline]
-    pub fn eval(&self) -> i32 {
-        self.entropy_stack.eval() * self.to_move.relative_value()
-    }
-    #[inline]
-    pub fn castling_rights(&self) -> CastlingRights {
-        self.entropy_stack.castling_rights()
-    }
     pub fn available_castling_types(&self, color: PieceColor) -> Vec<CastlingType> {
         let mut castling_types = Vec::new();
         match color {
             White => {
-                if self.castling_rights().white_king_side_castling {
+                if self.castling_rights.white_king_side_castling {
                     castling_types.push(CastlingType::WhiteKingSide)
                 }
-                if self.castling_rights().white_queen_side_castling {
+                if self.castling_rights.white_queen_side_castling {
                     castling_types.push(CastlingType::WhiteQueenSide)
                 }
             }
             Black => {
-                if self.castling_rights().black_king_side_castling {
+                if self.castling_rights.black_king_side_castling {
                     castling_types.push(CastlingType::BlackKingSide)
                 }
-                if self.castling_rights().black_queen_side_castling {
+                if self.castling_rights.black_queen_side_castling {
                     castling_types.push(CastlingType::BlackQueenSide)
                 }
             }
         }
         castling_types
     }
-    #[inline]
-    pub fn set_last_move(&mut self, mov: ChessMove) {
-        self.entropy_stack.set_last_move(mov)
-    }
-    #[inline]
-    pub fn set_last_capture(&mut self, captured_piece: Option<Piece>) {
-        self.entropy_stack.set_last_capture(captured_piece)
-    }
-    pub fn set_eval(&mut self, eval: i32) {
-        self.entropy_stack.top_mut().eval = eval
-    }
     pub fn increment_eval(&mut self, eval_increment: i32) {
-        self.entropy_stack.top_mut().eval += eval_increment * self.to_move.relative_value()
+        self.eval += eval_increment * self.to_move.relative_value()
     }
-    pub fn set_castling_rights(&mut self, castling_rights: CastlingRights) {
-        self.entropy_stack.top_mut().castling_rights = castling_rights
+    #[inline]
+    fn update_king_position(&mut self, dest: ChessCell) {
+        match self.to_move {
+            White => self.white_king_location = dest,
+            Black => self.black_king_location = dest,
+        }
     }
-    pub fn remove_castling_right(&mut self, castling_type: CastlingType) {
-        self.entropy_stack
-            .top_mut()
-            .castling_rights
-            .remove_castling_right(castling_type)
-    }
-    pub fn remove_color_castling_rights(&mut self, color: PieceColor) {
-        self.entropy_stack.top_mut().castling_rights.remove_color_castling_rights(color)
+    pub fn move_piece(&mut self, mov: ChessMove, eval_increment: &mut i32) {
+        let moving_piece = self.board.square(mov.start).piece().unwrap();
+        if let Some(captured_piece) = self.board.square(mov.dest).piece() {
+            *eval_increment += evaluate_piece(captured_piece, mov.dest.as_index());
+        }
+        *self.board.square_mut(mov.start) = Square::Empty;
+        *self.board.square_mut(mov.dest) = Square::Full(moving_piece);
+        self.update_bitboards(mov);
+        *eval_increment += positional_value_delta(moving_piece, mov);
+
     }
     pub fn make_move(&mut self, mov: ChessMove) {
         let start = mov.start;
         let dest = mov.dest;
+        self.last_move = Some(mov);
         let mut eval_increment = 0;
 
         let moving_piece = self.board.square(start).piece().unwrap();
 
-        *self.board.square_mut(start) = Square::Empty;
-
-        let attacked_square = self.board.square(dest);
-
-        if let Some(attacked_piece) = attacked_square.piece() {
-            eval_increment += evaluate_piece(attacked_piece, dest.as_index());
+        if moving_piece.kind == King {
+            self
+            .castling_rights.remove_color_castling_rights(self.to_move);
+            self.update_king_position(dest);
+            // If king moves two squares, must be castle
+            let move_is_castle = start.1.abs_diff(dest.1) == 2;
+            if move_is_castle {
+                self.resolve_castling(mov, &mut eval_increment);
+            }
         }
-
-        self.entropy_stack.push(mov, attacked_square.piece());
-
-        *self.board.square_mut(dest) = Square::Full(moving_piece);
-
-        eval_increment += positional_value_delta(moving_piece, mov);
+        // If a rook moves
+        if moving_piece.kind == Rook && matches!(start, A1 | A8 | H1 | H8) {
+            self
+                .castling_rights.remove_castling_right(start.into())
+        }
+        // If a rook is potentially captured on its starting square
+        if matches!(dest, A1 | A8 | H1 | H8) {
+            self
+                .castling_rights.remove_castling_right(dest.into())
+        }
+        self.move_piece(mov, &mut eval_increment);
 
         self.increment_eval(eval_increment);
 
-        if moving_piece.kind() == King {
-            match moving_piece.color() {
-                White => self.white_king_location = dest,
-                Black => self.black_king_location = dest,
-            }
-            // King moved two squares, must be castle
-            if (start.1 as i8 - dest.1 as i8).abs() == 2 {
-                let starting_rank = match self.to_move {
-                    White => RANK_1, 
-                    Black => RANK_8,
-                };
-                let (rook_start, rook_dest) = match dest.1 {
-                    C_FILE => (ChessCell(starting_rank, A_FILE), ChessCell(starting_rank, D_FILE)),
-                    G_FILE => (ChessCell(starting_rank, H_FILE), ChessCell(starting_rank, F_FILE)),
-                    _ => unreachable!(),
-                };
-                *self.board.square_mut(rook_dest) = *self.board.square(rook_start);
-                *self.board.square_mut(rook_start) = Square::Empty;
-                let rook_mov = ChessMove {start: rook_start, dest: rook_dest};
-                self.update_bitboards(rook_mov)
-            }
-            self.remove_color_castling_rights(self.to_move);
-
-        }
-        if moving_piece.kind() == Rook {
-            match start {
-                ChessCell(RANK_1, A_FILE) => self.remove_castling_right(CastlingType::WhiteQueenSide),
-                ChessCell(RANK_1, H_FILE) => self.remove_castling_right(CastlingType::WhiteKingSide),
-                ChessCell(RANK_8, A_FILE) => self.remove_castling_right(CastlingType::BlackQueenSide),
-                ChessCell(RANK_8, H_FILE) => self.remove_castling_right(CastlingType::BlackKingSide),
-                _ => {}
-            };
-        }
-        if let Some(captured_piece) = self.board.square(dest).piece() {
-            if captured_piece.kind() == Rook {
-            match dest {
-                ChessCell(RANK_1, A_FILE) => self.remove_castling_right(CastlingType::WhiteQueenSide),
-                ChessCell(RANK_1, H_FILE) => self.remove_castling_right(CastlingType::WhiteKingSide),
-                ChessCell(RANK_8, A_FILE) => self.remove_castling_right(CastlingType::BlackQueenSide),
-                ChessCell(RANK_8, H_FILE) => self.remove_castling_right(CastlingType::BlackKingSide),
-                _ => {}
-            
-            }
-        }
-        }
-
-        self.update_bitboards(mov);
-
         self.swap_to_move();
     }
-    pub fn unmake_move(&mut self) {
-        self.swap_to_move();
-        let reverse_move = self.last_move().unwrap().reverse();
-        let start = reverse_move.start;
-        let dest = reverse_move.dest;
-        let moving_piece = self.board.square(start).piece().unwrap();
+    fn resolve_castling(&mut self, mov: ChessMove, eval_increment: &mut i32) {
+            let (rook_start, rook_dest) = match mov.dest {
+                G1 => (H1, F1),
+                C1 => (A1, D1),
+                G8 => (H8, F8),
+                C8 => (A8, D8),
+                _ => unreachable!(),
+            };
+            let rook_move = ChessMove {
+                start: rook_start,
+                dest: rook_dest,
+            };
+            self.move_piece(rook_move, eval_increment);
 
-        *self.board.square_mut(start) = Square::Empty;
-
-        *self.board.square_mut(dest) = Square::Full(moving_piece);
-        self.downgrade_bitboards(reverse_move, self.last_capture());
-
-        if let Some(captured_piece) = self.last_capture() {
-            *self.board.square_mut(reverse_move.start) = Square::Full(captured_piece);
-        }
-        if moving_piece.kind() == King {
-            match moving_piece.color() {
-                White => self.white_king_location = dest,
-                Black => self.black_king_location = dest,
-            }
-            // King moved two squares, must be castle
-            if (start.1 as i8 - dest.1 as i8).abs() == 2 {
-                let starting_rank = match self.to_move {
-                    White => RANK_1, 
-                    Black => RANK_8,
-                };
-                // Uncastling the rook 
-                let (rook_dest, rook_start) = match start.1 {
-                    C_FILE => (ChessCell(starting_rank, A_FILE), ChessCell(starting_rank, D_FILE)),
-                    G_FILE => (ChessCell(starting_rank, H_FILE), ChessCell(starting_rank, F_FILE)),
-                    _ => {dbg!(reverse_move);
-                         panic!()},
-                };
-                *self.board.square_mut(rook_dest) = *self.board.square(rook_start);
-                *self.board.square_mut(rook_start) = Square::Empty;
-                let rook_mov = ChessMove {start: rook_start, dest: rook_dest};
-                self.downgrade_bitboards(rook_mov, None);
-            }
-        }
-
-        self.entropy_stack.pop();
     }
     fn update_bitboards(&mut self, mov: ChessMove) {
         let (current_player_bitboard, opposing_player_bitboard) = match self.to_move {
@@ -802,8 +295,13 @@ impl BoardState {
         for attacker in self.get_piece_positions(color) {
             let attacker_idx = attacker.as_index();
             let attacking_square = self.board.square(attacker);
+            if !attacking_square.has_piece() {
+                print!("{}", self.board);
+                print!("White bb: {}\n black bb: {}", self.white_bitboard, self.black_bitboard);
+                println!("{:?}", self);
+            }
             let attacking_piece = attacking_square.piece().unwrap();
-            let attacked_squares = match (attacking_piece.color(), attacking_piece.kind()) {
+            let attacked_squares = match (attacking_piece.color, attacking_piece.kind) {
                 (White, Pawn) => WHITE_PAWN_RAY_ATTACKS[attacker_idx],
                 (Black, Pawn) => BLACK_PAWN_RAY_ATTACKS[attacker_idx],
                 (_, Knight) => KNIGHT_RAY_ATTACKS[attacker_idx],
@@ -818,78 +316,90 @@ impl BoardState {
         }
         ray_attackers
     }
-}
-// ChessCell represents a valid algebraic square on the board
-// The format is row, col, or rank, file in chess terms.
-// b4 will therefore translate to ChessCell(3, 5)
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ChessCell(pub usize, pub usize);
-impl From<(usize, usize)> for ChessCell {
-    fn from(value: (usize, usize)) -> Self {
-        ChessCell(value.0, value.1)
+    pub fn empty_game() -> BoardState {
+        let board = ChessBoard::empty();
+        let to_move = White;
+        let white_bitboard = BitBoard(0);
+        let black_bitboard = BitBoard(0);
+        let white_king_location = ChessCell(100, 100);
+        let black_king_location = ChessCell(100, 100);
+        let castling_rights = CastlingRights::all_castling_rights();
+        return BoardState {
+            board,
+            to_move,
+            white_bitboard,
+            black_bitboard,
+            white_king_location,
+            black_king_location,
+            last_move: None,
+            eval: 0,
+            castling_rights
+        };
+    }
+    pub fn new_game() -> BoardState {
+        let board = ChessBoard::new();
+        let to_move = White;
+        let white_bitboard = WHITE_STARTING_BITBOARD;
+        let black_bitboard = BLACK_STARTING_BITBOARD;
+        let white_king_location = ChessCell(RANK_1, E_FILE);
+        let black_king_location = ChessCell(RANK_8, E_FILE);
+        let castling_rights = CastlingRights::all_castling_rights();
+        let _en_passant_square: Option<()> = None;
+        let _pawn_promotion: Option<()> = None;
+        let mut board_state = BoardState {
+            board,
+            to_move,
+            white_bitboard,
+            black_bitboard,
+            white_king_location,
+            black_king_location,
+            last_move: None,
+            eval: 0,
+            castling_rights
+                };
+        board_state.eval = evaluate(&board_state);
+        board_state
+    }
+    pub fn from_fen(fen: &str) -> Result<BoardState, &str> {
+        let fen_parts: Vec<&str> = fen.split_ascii_whitespace().collect();
+        if fen_parts.len() != 6 {
+            return Err("Failed to parse FEN string: FEN string did not have length 6");
+        }
+        let fen_board = fen_parts[0];
+        let board = fen::board_from_fen(fen_board)?;
+        let (white_king_location, black_king_location) = find_kings(&board)?;
+        let fen_to_move = fen_parts[1];
+        let to_move = fen::to_move_from_fen(fen_to_move)?;
+        let fen_castling_rights = fen_parts[2];
+        let castling_rights = castling_rights_from_fen(fen_castling_rights)?;
+        let fen_en_passant_square = fen_parts[3];
+        let _en_passant_square = en_passant_square_from_fen(fen_en_passant_square)?;
+        let _halfmove_clock = fen_parts[4];
+        let _fullmove_clock = fen_parts[5];
+        if white_king_location.0 > BOARD_END
+            || white_king_location.1 > BOARD_END
+            || black_king_location.0 > BOARD_END
+            || black_king_location.1 > BOARD_END
+        {
+            return Err("Failed to parse FEN string: Both kings were not on the board");
+        }
+        let (white_bitboard, black_bitboard) = get_bitboards(&board);
+        let mut board_state = BoardState {
+            board,
+            to_move,
+            white_bitboard,
+            black_bitboard,
+            white_king_location,
+            black_king_location,
+            last_move: None,
+            eval: 0,
+            castling_rights
+        };
+        board_state.eval = evaluate(&board_state);
+        Ok(board_state)
     }
 }
 
-impl ChessCell {
-    pub fn as_index(self) -> usize {
-        let rank_index = self.0 - BOARD_START;
-        let file_index = self.1 - BOARD_START;
-        rank_index * 8 + file_index
-    }
-    pub fn from_index(index: usize) -> ChessCell {
-        let rank = index / 8 + BOARD_START;
-        let file = index % 8 + BOARD_START;
-        ChessCell(rank, file)
-    }
-    pub fn is_aether(self) -> bool {
-        self.0 <= 1 || self.0 >= 10 || self.1 <= 1 || self.1 >= 10
-    }
-}
-impl FromStr for ChessCell {
-    type Err = &'static str;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.len() != 2 {
-            return Err("Failed to parse ChessCell from string: Length was not 2");
-        }
-        let col = s.chars().next().unwrap();
-        let row = s.chars().nth(1).unwrap();
-
-        let file = match col {
-            'a' => 0,
-            'b' => 1,
-            'c' => 2,
-            'd' => 3,
-            'e' => 4,
-            'f' => 5,
-            'g' => 6,
-            'h' => 7,
-            _ => return Err("Failed to parse ChessCell from string: Invalid file"),
-        };
-        let row = row.to_digit(10);
-        if row.is_none() {
-            return Err("Failed to parse ChessCell from string: rank was not a valid number");
-        }
-        let rank = BOARD_END - row.unwrap() as usize;
-        Ok(ChessCell(rank, file + BOARD_START))
-    }
-}
-impl std::fmt::Display for ChessCell {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let rank = self.0 - 1;
-        let file = match self.1 - 1 {
-            1 => 'a',
-            2 => 'b',
-            3 => 'c',
-            4 => 'd',
-            5 => 'e',
-            6 => 'f',
-            7 => 'g',
-            8 => 'h',
-            _ => panic!("Tried to print square that was outside the board"),
-        };
-        write!(f, "{}{}", file, rank)
-    }
-}
 // Returns (white_bitboard, black_bitboard)
 pub fn get_bitboards(board: &ChessBoard) -> (BitBoard, BitBoard) {
     let mut white_bitboard: u64 = 0;
@@ -916,8 +426,8 @@ fn find_kings(board: &ChessBoard) -> Result<(ChessCell, ChessCell), &'static str
         for file in A_FILE..=H_FILE {
             let square = board.square(ChessCell(rank, file));
             if let Square::Full(piece) = square {
-                if piece.kind() == King {
-                    match piece.color() {
+                if piece.kind == King {
+                    match piece.color {
                         White => white_king_location = Some(ChessCell(rank, file)),
                         Black => black_king_location = Some(ChessCell(rank, file)),
                     }
@@ -932,6 +442,8 @@ fn find_kings(board: &ChessBoard) -> Result<(ChessCell, ChessCell), &'static str
 }
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use super::*;
     #[test]
     fn parse_chess_cell_from_valid_str_succeeds() {
@@ -978,7 +490,6 @@ mod tests {
             new_board_state.pawn_promotion
         );
         */
-        assert_eq!(fen_board_state.entropy_stack, new_board_state.entropy_stack);
     }
     #[test]
     #[should_panic]
@@ -1067,33 +578,5 @@ mod tests {
         assert_eq!(white_king_square.is_empty_or_enemy_of(White), false);
         let c6 = board.square(ChessCell(RANK_6, C_FILE));
         assert_eq!(c6.is_empty_or_enemy_of(White), true);
-    }
-    #[test]
-    fn make_unmake_on_new_board_restores_board_state() {
-        let mut board_state = BoardState::new_game();
-        let mov = ChessMove {
-            start: ChessCell(RANK_2, E_FILE),
-            dest: ChessCell(RANK_4, E_FILE),
-        };
-        board_state.make_move(mov);
-        board_state.unmake_move();
-        assert_eq!(board_state, BoardState::new_game())
-    }
-    #[test]
-    fn make_unmake_on_board_with_capture_restores_board_state() {
-        let mut board_state =
-            BoardState::from_fen("rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2")
-                .unwrap();
-        let mov = ChessMove {
-            start: ChessCell(RANK_4, E_FILE),
-            dest: ChessCell(RANK_5, D_FILE),
-        };
-        board_state.make_move(mov);
-        board_state.unmake_move();
-        assert_eq!(
-            board_state,
-            BoardState::from_fen("rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2")
-                .unwrap()
-        )
     }
 }

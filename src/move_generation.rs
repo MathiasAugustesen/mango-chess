@@ -1,25 +1,25 @@
 use crate::board::BoardState;
-use crate::board::ChessCell;
-use crate::board::Piece;
-use crate::board::PieceColor;
-use crate::board::PieceColor::*;
-use crate::board::PieceKind::*;
-use crate::board::Square;
+use crate::board_elements::ChessCell;
+use crate::board_elements::ChessMove;
+use crate::board_elements::Piece;
+use crate::board_elements::PieceColor;
+use crate::board_elements::PieceColor::*;
+use crate::board_elements::PieceKind::*;
+use crate::board_elements::Square;
 use crate::constants::*;
 use crate::ray_attacks::KING_RAY_ATTACKS;
 use crate::ray_attacks::KNIGHT_RAY_ATTACKS;
-use crate::ChessMove;
 const BISHOP_DIRECTIONS: [(i32, i32); 4] = [(-1, -1), (-1, 1), (1, -1), (1, 1)];
 const ROOK_DIRECTIONS: [(i32, i32); 4] = [(-1, 0), (0, -1), (0, 1), (1, 0)];
-pub fn generate_moves(board_state: &mut BoardState) -> Vec<ChessMove> {
+pub fn generate_moves(board_state: &BoardState) -> Vec<ChessMove> {
     let mut valid_moves: Vec<ChessMove> = Vec::with_capacity(16);
     let potential_moves = generate_pseudo_moves_for_player(board_state);
     for mov in potential_moves {
-        board_state.make_move(mov);
-        if board_state.is_valid_move() {
+        let mut copy_board = board_state.clone();
+        copy_board.make_move(mov);
+        if copy_board.is_valid_move() {
             valid_moves.push(mov);
         }
-        board_state.unmake_move();
     }
     valid_moves.extend(generate_castling_moves(board_state));
     valid_moves
@@ -36,7 +36,10 @@ pub fn generate_castling_moves(board_state: &BoardState) -> Vec<ChessMove> {
 
         if step_one.is_empty()
             && step_two.is_empty()
-            && !board_state.square_is_attacked(board_state.king_location_of(board_state.to_move), board_state.to_move.opposite())
+            && !board_state.square_is_attacked(
+                board_state.king_location_of(board_state.to_move),
+                board_state.to_move.opposite(),
+            )
             && !board_state.square_is_attacked(step_one_cell, board_state.to_move.opposite())
             && !board_state.square_is_attacked(step_two_cell, board_state.to_move.opposite())
         {
@@ -53,6 +56,7 @@ pub fn generate_pseudo_moves_for_player(board_state: &BoardState) -> Vec<ChessMo
         let piece = board_state.board.square(position).piece().unwrap();
         generate_pseudo_moves_for_piece(piece, board_state, position, &mut potential_moves);
     }
+    potential_moves.extend(generate_castling_moves(board_state));
     potential_moves
 }
 pub fn generate_pseudo_moves_for_piece(
@@ -61,8 +65,8 @@ pub fn generate_pseudo_moves_for_piece(
     position: ChessCell,
     pseudo_moves: &mut Vec<ChessMove>,
 ) {
-    let color = piece.color();
-    match piece.kind() {
+    let color = piece.color;
+    match piece.kind {
         Pawn => match color {
             White => white_pawn_moves(board_state, position, pseudo_moves),
             Black => black_pawn_moves(board_state, position, pseudo_moves),

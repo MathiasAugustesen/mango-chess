@@ -1,12 +1,12 @@
 use std::str::FromStr;
 
-use crate::board::CastlingRights;
 use crate::board::ChessBoard;
-use crate::board::ChessCell;
-use crate::board::Piece;
-use crate::board::PieceColor;
-use crate::board::PieceColor::{Black, White};
-use crate::board::Square;
+use crate::board_elements::CastlingRights;
+use crate::board_elements::ChessCell;
+use crate::board_elements::Piece;
+use crate::board_elements::PieceColor;
+use crate::board_elements::PieceColor::{Black, White};
+use crate::board_elements::Square;
 use crate::constants::*;
 pub fn board_from_fen(fen_board: &str) -> Result<ChessBoard, &str> {
     let mut board = ChessBoard::empty();

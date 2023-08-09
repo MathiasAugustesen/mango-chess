@@ -1,7 +1,7 @@
 use crate::board::BoardState;
-use crate::board::Piece;
-use crate::board::PieceColor;
-use crate::board::PieceColor::*;
+use crate::board_elements::Piece;
+use crate::board_elements::PieceColor;
+use crate::board_elements::PieceColor::*;
 pub fn evaluate(board_state: &BoardState) -> i32 {
     let mut evaluation: i32 = 0;
     evaluation += get_player_eval(board_state, White);
@@ -25,7 +25,7 @@ pub fn evaluate_piece(piece: Piece, pos: usize) -> i32 {
     piece.value() + positional_value(piece, pos)
 }
 pub fn positional_value(piece: Piece, pos: usize) -> i32 {
-    let position_values_index = match piece.color() {
+    let position_values_index = match piece.color {
         White => 63 - pos,
         Black => pos,
     };

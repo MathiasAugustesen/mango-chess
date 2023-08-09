@@ -1,9 +1,9 @@
 use crate::board::BoardState;
-use crate::move_generation::{generate_moves, generate_pseudo_moves_for_player};
+use crate::board_elements::ChessMove;
+use crate::move_generation::generate_pseudo_moves_for_player;
 use crate::move_ordering::move_sort;
-use crate::ChessMove;
 pub fn negamax(
-    board_state: &mut BoardState,
+    board_state: &BoardState,
     depth: u8,
     alpha: i32,
     beta: i32,
@@ -12,20 +12,19 @@ pub fn negamax(
 ) -> i32 {
     if depth == 0 {
         *counter += 1;
-        return board_state.eval();
+        return board_state.eval * board_state.to_move.relative_value();
     }
     let mut best_eval = -i32::MAX;
     let mut available_pseudo_moves = generate_pseudo_moves_for_player(board_state);
 
     available_pseudo_moves.sort_by_cached_key(|&mov| -move_sort(&board_state, mov));
     for mov in available_pseudo_moves {
-        board_state.make_move(mov);
-        if !board_state.is_valid_move() {
-            board_state.unmake_move();
+        let mut copy_board = board_state.clone();
+        copy_board.make_move(mov);
+        if !copy_board.is_valid_move() {
             continue;
         }
-        let eval = -negamax(board_state, depth - 1, -beta, -alpha, counter, prunes);
-        board_state.unmake_move();
+        let eval = -negamax(&copy_board, depth - 1, -beta, -alpha, counter, prunes);
         let alpha = alpha.max(eval);
         best_eval = eval.max(best_eval);
         if alpha >= beta {
@@ -36,20 +35,24 @@ pub fn negamax(
     best_eval
 }
 
-pub fn search(board_state: &mut BoardState, depth: u8) -> (i32, Option<ChessMove>, i32, i32) {
+pub fn search(board_state: &BoardState, depth: u8) -> (i32, Option<ChessMove>, i32, i32) {
     let mut alpha = -i32::MAX;
     let beta = i32::MAX;
     let mut best_eval = -i32::MAX;
     let mut best_move = None;
     let mut nodes_evaluated = 0;
     let mut prunes = 0;
-    let mut possible_moves = generate_moves(board_state);
+    let mut possible_moves = generate_pseudo_moves_for_player(board_state);
 
     possible_moves.sort_by_cached_key(|&mov| -move_sort(&board_state, mov));
     for mov in possible_moves {
-        board_state.make_move(mov);
+        let mut copy_board = board_state.clone();
+        copy_board.make_move(mov);
+        if !copy_board.is_valid_move() {
+            continue;
+        }
         let eval = -negamax(
-            board_state,
+            &copy_board,
             depth - 1,
             -beta,
             -alpha,
@@ -59,9 +62,8 @@ pub fn search(board_state: &mut BoardState, depth: u8) -> (i32, Option<ChessMove
 
         if eval > best_eval {
             best_eval = eval;
-            best_move = board_state.last_move();
+            best_move = copy_board.last_move;
         }
-        board_state.unmake_move();
         alpha = alpha.max(eval);
     }
     println!(
