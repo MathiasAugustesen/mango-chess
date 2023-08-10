@@ -6,7 +6,7 @@ pub fn evaluate(board_state: &BoardState) -> i32 {
     let mut evaluation: i32 = 0;
     evaluation += get_player_eval(board_state, White);
     evaluation -= get_player_eval(board_state, Black);
-    evaluation * board_state.to_move.relative_value()
+    evaluation * board_state.to_move.signum()
 }
 fn get_player_eval(board_state: &BoardState, color: PieceColor) -> i32 {
     board_state
