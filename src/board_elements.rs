@@ -35,6 +35,13 @@ impl PieceColor {
             Black => RANK_6,
         }
     }
+
+    pub fn en_passant_attacking_rank(self) -> usize {
+        match self {
+            White => RANK_5,
+            Black => RANK_4,
+        }
+    }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PieceKind {
