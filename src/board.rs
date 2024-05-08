@@ -94,7 +94,6 @@ pub struct BoardState {
     pub castling_rights: CastlingRights,
 }
 impl BoardState {
-    
     #[inline]
     pub fn swap_to_move(&mut self) {
         match self.to_move {
@@ -155,7 +154,6 @@ impl BoardState {
         *self.board.square_mut(mov.dest) = Square::Full(moving_piece);
         self.update_bitboards(mov);
         *eval_increment += positional_value_delta(moving_piece, mov);
-
     }
     pub fn make_move(&mut self, mov: ChessMove) {
         let start = mov.start;
@@ -166,8 +164,8 @@ impl BoardState {
         let moving_piece = self.board.square(start).piece().unwrap();
 
         if moving_piece.kind == King {
-            self
-            .castling_rights.remove_color_castling_rights(self.to_move);
+            self.castling_rights
+                .remove_color_castling_rights(self.to_move);
             self.update_king_position(dest);
             // If king moves two squares, must be castle
             let move_is_castle = start.1.abs_diff(dest.1) == 2;
@@ -177,20 +175,21 @@ impl BoardState {
         }
         // If a rook moves
         if moving_piece.kind == Rook && matches!(start, A1 | A8 | H1 | H8) {
-            self
-                .castling_rights.remove_castling_right(start.into())
+            self.castling_rights.remove_castling_right(start.into())
         }
         // If a rook is potentially captured on its starting square
         if matches!(dest, A1 | A8 | H1 | H8) {
-            self
-                .castling_rights.remove_castling_right(dest.into())
+            self.castling_rights.remove_castling_right(dest.into())
         }
         // Check if it was an en passant capture
-        if Some(dest) == self.en_passant && moving_piece.kind == Pawn && start.1.abs_diff(dest.1) == 1  {
+        if Some(dest) == self.en_passant
+            && moving_piece.kind == Pawn
+            && start.1.abs_diff(dest.1) == 1
+        {
             print!("dest: {dest}\nep: {}", self.en_passant.unwrap());
-            
-                let en_passant_capture = ChessCell(start.0, dest.1);
-                self.kill_en_passant_piece(en_passant_capture, &mut eval_increment);
+
+            let en_passant_capture = ChessCell(start.0, dest.1);
+            self.kill_en_passant_piece(en_passant_capture, &mut eval_increment);
         }
 
         // Reset en passant
@@ -199,8 +198,8 @@ impl BoardState {
         // Initialize possible en passant
         if moving_piece.kind == Pawn && start.0.abs_diff(dest.0) == 2 {
             let ep_rank = self.to_move.en_passant_rank();
-                let en_passant_square = ChessCell(ep_rank, dest.1);
-                self.en_passant = Some(en_passant_square);
+            let en_passant_square = ChessCell(ep_rank, dest.1);
+            self.en_passant = Some(en_passant_square);
         }
 
         self.move_piece(mov, &mut eval_increment);
@@ -210,19 +209,18 @@ impl BoardState {
         self.swap_to_move();
     }
     fn resolve_castling(&mut self, mov: ChessMove, eval_increment: &mut i32) {
-            let (rook_start, rook_dest) = match mov.dest {
-                G1 => (H1, F1),
-                C1 => (A1, D1),
-                G8 => (H8, F8),
-                C8 => (A8, D8),
-                _ => unreachable!(),
-            };
-            let rook_move = ChessMove {
-                start: rook_start,
-                dest: rook_dest,
-            };
-            self.move_piece(rook_move, eval_increment);
-
+        let (rook_start, rook_dest) = match mov.dest {
+            G1 => (H1, F1),
+            C1 => (A1, D1),
+            G8 => (H8, F8),
+            C8 => (A8, D8),
+            _ => unreachable!(),
+        };
+        let rook_move = ChessMove {
+            start: rook_start,
+            dest: rook_dest,
+        };
+        self.move_piece(rook_move, eval_increment);
     }
     fn remove_from_bitboard(&mut self, square: ChessCell) {
         let opposing_player_bitboard = match self.to_move {
@@ -335,7 +333,10 @@ impl BoardState {
             let attacking_square = self.board.square(attacker);
             if !attacking_square.has_piece() {
                 print!("{}", self.board);
-                print!("White bb: {}\n black bb: {}", self.white_bitboard, self.black_bitboard);
+                print!(
+                    "White bb: {}\n black bb: {}",
+                    self.white_bitboard, self.black_bitboard
+                );
                 println!("{:?}", self);
             }
             let attacking_piece = attacking_square.piece().unwrap();
@@ -372,7 +373,7 @@ impl BoardState {
             last_move: None,
             en_passant: None,
             eval: 0,
-            castling_rights
+            castling_rights,
         };
     }
     pub fn new_game() -> BoardState {
@@ -395,8 +396,8 @@ impl BoardState {
             last_move: None,
             en_passant: None,
             eval: 0,
-            castling_rights
-                };
+            castling_rights,
+        };
         board_state.eval = evaluate(&board_state);
         board_state
     }
@@ -434,7 +435,7 @@ impl BoardState {
             last_move: None,
             en_passant: None,
             eval: 0,
-            castling_rights
+            castling_rights,
         };
         board_state.eval = evaluate(&board_state);
         Ok(board_state)
@@ -483,8 +484,8 @@ fn find_kings(board: &ChessBoard) -> Result<(ChessCell, ChessCell), &'static str
 }
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
     use super::*;
+    use std::str::FromStr;
     #[test]
     fn parse_chess_cell_from_valid_str_succeeds() {
         let parsed_cell: ChessCell = ChessCell::from_str("b4").unwrap();

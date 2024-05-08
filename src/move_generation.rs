@@ -222,7 +222,7 @@ pub fn king_moves(
     board_state: &BoardState,
     position: ChessCell,
     moves: &mut Vec<ChessMove>,
-) { 
+) {
     let destinations = KING_RAY_ATTACKS[position.as_index()];
     for destination in destinations {
         let target = ChessCell::from_index(*destination);
@@ -236,20 +236,24 @@ pub fn generate_en_passant_moves(board_state: &BoardState) -> Vec<ChessMove> {
     if let Some(en_passant_square) = board_state.en_passant {
         let target_rank = board_state.to_move.opposite().en_passant_rank();
         let threatened_square = ChessCell(target_rank, en_passant_square.1);
-        if board_state.board.square(threatened_square).is_color(board_state.to_move) {
-            return Vec::new()
+        if board_state
+            .board
+            .square(threatened_square)
+            .is_color(board_state.to_move)
+        {
+            return Vec::new();
         }
         let left_threat = ChessCell(en_passant_square.0, en_passant_square.1 - 1);
         let right_threat = ChessCell(en_passant_square.0, en_passant_square.1 + 1);
         for threat in [left_threat, right_threat] {
             let threatening_square = board_state.board.square(threat);
             if threatening_square.is_aether() {
-                continue
+                continue;
             }
             if let Some(threatening_piece) = threatening_square.piece() {
-                if threatening_piece.kind == Pawn && threatening_piece.color == board_state.to_move {
+                if threatening_piece.kind == Pawn && threatening_piece.color == board_state.to_move
+                {
                     en_passant_moves.push((threat, threatened_square).into());
-
                 }
             }
         }
@@ -279,11 +283,12 @@ mod tests {
     }
     #[test]
     fn en_passant_move_is_valid() {
-        let mut board_state = BoardState::from_fen("rnbqkbnr/ppppppp1/7p/4P3/8/8/PPPP1PPP/RNBQKBNR b KQkq - 0 2").unwrap();
+        let mut board_state =
+            BoardState::from_fen("rnbqkbnr/ppppppp1/7p/4P3/8/8/PPPP1PPP/RNBQKBNR b KQkq - 0 2")
+                .unwrap();
 
         board_state.make_move((D7, D5).into());
         display_moves(&generate_moves(&board_state));
         assert!(generate_moves(&board_state).contains(&(E5, D6).into()))
-
     }
 }

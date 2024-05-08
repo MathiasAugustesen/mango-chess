@@ -152,7 +152,6 @@ impl std::fmt::Display for Piece {
             (Black, King) => '♚',
         };
         write!(f, "{symbol}")
-
     }
 }
 impl Piece {
@@ -435,7 +434,7 @@ impl From<ChessCell> for CastlingType {
             H1 => CastlingType::WhiteKingSide,
             A8 => CastlingType::BlackQueenSide,
             H8 => CastlingType::BlackKingSide,
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 }
