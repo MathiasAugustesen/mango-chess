@@ -5,6 +5,7 @@ pub mod constants;
 pub mod fen;
 pub mod move_generation;
 use board_elements::PieceColor;
+pub mod chess_board;
 pub mod engine;
 pub mod evaluation;
 pub mod move_ordering;
