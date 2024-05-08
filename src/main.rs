@@ -1,6 +1,6 @@
-use crate::{board::BoardState, move_generation::generate_moves};
-pub mod board;
+use crate::{board_state::BoardState, move_generation::generate_moves};
 pub mod board_elements;
+pub mod board_state;
 pub mod constants;
 pub mod fen;
 pub mod move_generation;
