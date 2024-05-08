@@ -1,5 +1,5 @@
-use crate::board::BoardState;
 use crate::board_elements::ChessMove;
+use crate::board_state::BoardState;
 use crate::move_generation::generate_pseudo_moves_for_player;
 use crate::move_ordering::move_sort;
 pub fn negamax(board_state: &BoardState, depth: u8, alpha: i32, beta: i32) -> i32 {

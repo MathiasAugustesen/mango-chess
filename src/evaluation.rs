@@ -1,7 +1,7 @@
-use crate::board::BoardState;
 use crate::board_elements::Piece;
 use crate::board_elements::PieceColor;
 use crate::board_elements::PieceColor::*;
+use crate::board_state::BoardState;
 pub fn evaluate(board_state: &BoardState) -> i32 {
     let mut evaluation: i32 = 0;
     evaluation += get_player_eval(board_state, White);

@@ -1,4 +1,3 @@
-use crate::board::BoardState;
 use crate::board_elements::ChessCell;
 use crate::board_elements::ChessMove;
 use crate::board_elements::Piece;
@@ -6,6 +5,7 @@ use crate::board_elements::PieceColor;
 use crate::board_elements::PieceColor::*;
 use crate::board_elements::PieceKind::*;
 use crate::board_elements::Square;
+use crate::board_state::BoardState;
 use crate::constants::*;
 use crate::ray_attacks::KING_RAY_ATTACKS;
 use crate::ray_attacks::KNIGHT_RAY_ATTACKS;
@@ -262,7 +262,7 @@ pub fn generate_en_passant_moves(board_state: &BoardState) -> Vec<ChessMove> {
 }
 #[cfg(test)]
 mod tests {
-    use crate::{board::BoardState, board_elements::display_moves};
+    use crate::{board_elements::display_moves, board_state::BoardState};
 
     use super::generate_moves;
     use crate::constants::*;
