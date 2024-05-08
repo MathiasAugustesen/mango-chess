@@ -122,8 +122,6 @@ impl BoardState {
             && moving_piece.kind == Pawn
             && start.1.abs_diff(dest.1) == 1
         {
-            print!("dest: {dest}\nep: {}", self.en_passant.unwrap());
-
             let en_passant_capture = ChessCell(start.0, dest.1);
             self.kill_en_passant_piece(en_passant_capture, &mut eval_increment);
         }

@@ -243,8 +243,11 @@ pub fn generate_en_passant_moves(board_state: &BoardState) -> Vec<ChessMove> {
         {
             return Vec::new();
         }
-        let left_threat = ChessCell(en_passant_square.0, en_passant_square.1 - 1);
-        let right_threat = ChessCell(en_passant_square.0, en_passant_square.1 + 1);
+
+        let attacking_rank = board_state.to_move.en_passant_attacking_rank();
+        let left_threat = ChessCell(attacking_rank, en_passant_square.1 - 1);
+        let right_threat = ChessCell(attacking_rank, en_passant_square.1 + 1);
+
         for threat in [left_threat, right_threat] {
             let threatening_square = board_state.board.square(threat);
             if threatening_square.is_aether() {
@@ -262,7 +265,10 @@ pub fn generate_en_passant_moves(board_state: &BoardState) -> Vec<ChessMove> {
 }
 #[cfg(test)]
 mod tests {
-    use crate::{board_elements::display_moves, board_state::BoardState};
+    use crate::{
+        board_elements::{Piece, PieceColor, PieceKind},
+        board_state::BoardState,
+    };
 
     use super::generate_moves;
     use crate::constants::*;
@@ -281,15 +287,42 @@ mod tests {
         let legal_moves = generate_moves(&mut board_state);
         assert_eq!(legal_moves.len(), 29);
     }
-    /*#[test]
-    fn en_passant_move_is_valid() {
+
+    #[test]
+    fn en_passant_with_one_pawn_can_capture() {
+        let mut board_state = BoardState::new_game();
+        board_state.make_move((E2, E4).into());
+        board_state.make_move((D7, D5).into());
+        board_state.make_move((E4, E5).into());
+        board_state.make_move((F7, F5).into());
+
+        let legal_moves = generate_moves(&board_state);
+
+        assert!(legal_moves.contains(&(E5, F6).into()));
+
+        board_state.make_move((E5, F6).into());
+
+        assert_eq!(
+            board_state.board.square(F6).piece().unwrap(),
+            Piece {
+                color: PieceColor::White,
+                kind: PieceKind::Pawn
+            }
+        );
+        assert!(!board_state.board.square(F5).has_piece());
+    }
+
+    #[test]
+    fn en_passant_with_two_pawns_can_both_capture() {
         let mut board_state =
-            BoardState::from_fen("rnbqkbnr/ppppppp1/7p/4P3/8/8/PPPP1PPP/RNBQKBNR b KQkq - 0 2")
+        // TODO: fix en passant not populated correctly from fen
+            BoardState::from_fen("rnbqkbnr/pp2pppp/8/2ppP1P1/8/8/PPPP1P1P/RNBQKBNR b KQkq - 0 4")
                 .unwrap();
 
-        board_state.make_move((D7, D5).into());
-        display_moves(&generate_moves(&board_state));
-        assert!(generate_moves(&board_state).contains(&(E5, D6).into()))
+        board_state.make_move((F7, F5).into());
+
+        let legal_moves = generate_moves(&board_state);
+        assert!(legal_moves.contains(&(E5, F6).into()));
+        assert!(legal_moves.contains(&(G5, F6).into()));
     }
-    */
 }
