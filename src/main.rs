@@ -28,8 +28,6 @@ impl std::fmt::Display for GameResult {
 }
 fn main() {
     let mut board_state = BoardState::new_game();
-    let mut total_nodes_evaluated = 0;
-    let mut total_prunes = 0;
     let mut moves = 0;
     loop {
         println!("{}", board_state.board);
@@ -38,10 +36,7 @@ fn main() {
             println!("{game_winner}");
             return;
         }
-        let (best_eval, best_move, nodes_evaluated, prunes) =
-            engine::search(&board_state, DEPTH);
-        total_nodes_evaluated += nodes_evaluated;
-        total_prunes += prunes;
+        let (best_eval, best_move) = engine::search(&board_state, DEPTH);
         moves += 1;
         let best_move = best_move.unwrap();
         let absolute_eval = best_eval
@@ -50,8 +45,8 @@ fn main() {
                 Black => -1,
             };
         println!(
-            "Evaluation is {} with the move {}. After {} turns, searched a grand total of {} nodes and pruned {} branches in total.",
-            absolute_eval, best_move, moves, total_nodes_evaluated, total_prunes
+            "Evaluation is {} with the move {}. Total moves: {}",
+            absolute_eval, best_move, moves
         );
         board_state.make_move(best_move);
     }
