@@ -309,8 +309,8 @@ impl BoardState {
         let to_move = White;
         let white_bitboard = WHITE_STARTING_BITBOARD;
         let black_bitboard = BLACK_STARTING_BITBOARD;
-        let white_king_location = ChessCell(RANK_1, E_FILE);
-        let black_king_location = ChessCell(RANK_8, E_FILE);
+        let white_king_location = E1;
+        let black_king_location = E8;
         let castling_rights = CastlingRights::all_castling_rights();
         let _en_passant_square: Option<()> = None;
         let _pawn_promotion: Option<()> = None;
@@ -495,44 +495,14 @@ mod tests {
                 .unwrap();
         let white_positions = board_state.get_piece_positions(White);
         let white_bongcloud_positions = [
-            ChessCell(RANK_1, A_FILE),
-            ChessCell(RANK_1, B_FILE),
-            ChessCell(RANK_1, C_FILE),
-            ChessCell(RANK_1, D_FILE),
-            ChessCell(RANK_1, F_FILE),
-            ChessCell(RANK_1, G_FILE),
-            ChessCell(RANK_1, H_FILE),
-            ChessCell(RANK_2, A_FILE),
-            ChessCell(RANK_2, B_FILE),
-            ChessCell(RANK_2, C_FILE),
-            ChessCell(RANK_2, D_FILE),
-            ChessCell(RANK_2, E_FILE),
-            ChessCell(RANK_2, F_FILE),
-            ChessCell(RANK_2, G_FILE),
-            ChessCell(RANK_2, H_FILE),
-            ChessCell(RANK_4, E_FILE),
+            A1, B1, C1, D1, F1, G1, H1, A2, B2, C2, D2, E2, F2, G2, H2, E4,
         ];
         for position in white_positions {
             assert!(white_bongcloud_positions.contains(&position))
         }
         let black_positions = board_state.get_piece_positions(Black);
         let black_bongcloud_positions = [
-            ChessCell(RANK_8, A_FILE),
-            ChessCell(RANK_8, B_FILE),
-            ChessCell(RANK_8, C_FILE),
-            ChessCell(RANK_8, D_FILE),
-            ChessCell(RANK_8, E_FILE),
-            ChessCell(RANK_8, F_FILE),
-            ChessCell(RANK_8, G_FILE),
-            ChessCell(RANK_8, H_FILE),
-            ChessCell(RANK_7, A_FILE),
-            ChessCell(RANK_7, B_FILE),
-            ChessCell(RANK_7, C_FILE),
-            ChessCell(RANK_7, D_FILE),
-            ChessCell(RANK_7, F_FILE),
-            ChessCell(RANK_7, G_FILE),
-            ChessCell(RANK_7, H_FILE),
-            ChessCell(RANK_5, E_FILE),
+            A8, B8, C8, D8, E8, F8, G8, H8, A7, B7, C7, D7, F7, G7, H7, E5,
         ];
         for position in black_positions {
             assert!(black_bongcloud_positions.contains(&position))
@@ -542,10 +512,10 @@ mod tests {
     fn is_empty_or_enemy_of_tests() {
         let board_state = BoardState::new_game();
         let board = board_state.board;
-        let white_king_square = board.square(ChessCell(RANK_1, E_FILE));
+        let white_king_square = board.square(E1);
         assert_eq!(white_king_square.is_empty_or_enemy_of(Black), true);
         assert_eq!(white_king_square.is_empty_or_enemy_of(White), false);
-        let c6 = board.square(ChessCell(RANK_6, C_FILE));
+        let c6 = board.square(C6);
         assert_eq!(c6.is_empty_or_enemy_of(White), true);
     }
 }

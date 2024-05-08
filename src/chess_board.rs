@@ -43,23 +43,23 @@ impl ChessBoard {
             *chess_board.square_mut(ChessCell(RANK_7, file)) = Piece::pawn(Black).into();
         }
         // Arrange white pieces
-        *chess_board.square_mut(ChessCell(RANK_1, A_FILE)) = Piece::rook(White).into();
-        *chess_board.square_mut(ChessCell(RANK_1, B_FILE)) = Piece::knight(White).into();
-        *chess_board.square_mut(ChessCell(RANK_1, C_FILE)) = Piece::bishop(White).into();
-        *chess_board.square_mut(ChessCell(RANK_1, D_FILE)) = Piece::queen(White).into();
-        *chess_board.square_mut(ChessCell(RANK_1, E_FILE)) = Piece::king(White).into();
-        *chess_board.square_mut(ChessCell(RANK_1, F_FILE)) = Piece::bishop(White).into();
-        *chess_board.square_mut(ChessCell(RANK_1, G_FILE)) = Piece::knight(White).into();
-        *chess_board.square_mut(ChessCell(RANK_1, H_FILE)) = Piece::rook(White).into();
+        *chess_board.square_mut(A1) = Piece::rook(White).into();
+        *chess_board.square_mut(B1) = Piece::knight(White).into();
+        *chess_board.square_mut(C1) = Piece::bishop(White).into();
+        *chess_board.square_mut(D1) = Piece::queen(White).into();
+        *chess_board.square_mut(E1) = Piece::king(White).into();
+        *chess_board.square_mut(F1) = Piece::bishop(White).into();
+        *chess_board.square_mut(G1) = Piece::knight(White).into();
+        *chess_board.square_mut(H1) = Piece::rook(White).into();
         // Arrange black pieces
-        *chess_board.square_mut(ChessCell(RANK_8, A_FILE)) = Piece::rook(Black).into();
-        *chess_board.square_mut(ChessCell(RANK_8, B_FILE)) = Piece::knight(Black).into();
-        *chess_board.square_mut(ChessCell(RANK_8, C_FILE)) = Piece::bishop(Black).into();
-        *chess_board.square_mut(ChessCell(RANK_8, D_FILE)) = Piece::queen(Black).into();
-        *chess_board.square_mut(ChessCell(RANK_8, E_FILE)) = Piece::king(Black).into();
-        *chess_board.square_mut(ChessCell(RANK_8, F_FILE)) = Piece::bishop(Black).into();
-        *chess_board.square_mut(ChessCell(RANK_8, G_FILE)) = Piece::knight(Black).into();
-        *chess_board.square_mut(ChessCell(RANK_8, H_FILE)) = Piece::rook(Black).into();
+        *chess_board.square_mut(A8) = Piece::rook(Black).into();
+        *chess_board.square_mut(B8) = Piece::knight(Black).into();
+        *chess_board.square_mut(C8) = Piece::bishop(Black).into();
+        *chess_board.square_mut(D8) = Piece::queen(Black).into();
+        *chess_board.square_mut(E8) = Piece::king(Black).into();
+        *chess_board.square_mut(F8) = Piece::bishop(Black).into();
+        *chess_board.square_mut(G8) = Piece::knight(Black).into();
+        *chess_board.square_mut(H8) = Piece::rook(Black).into();
         chess_board
     }
 }
