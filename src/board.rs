@@ -134,12 +134,6 @@ impl BoardState {
         }
     }
     pub fn kill_en_passant_piece(&mut self, square: ChessCell, eval_increment: &mut i32) {
-        println!("{}", self.board);
-        if let Some(ep) = self.en_passant {
-            println!("{}", ep);
-        }
-        dbg!(square);
-
         let trespasser = self.board.square(square).piece().unwrap();
         *eval_increment += evaluate_piece(trespasser, square.as_index());
         *self.board.square_mut(square) = Square::Empty;
@@ -331,14 +325,6 @@ impl BoardState {
         for attacker in self.get_piece_positions(color) {
             let attacker_idx = attacker.as_index();
             let attacking_square = self.board.square(attacker);
-            if !attacking_square.has_piece() {
-                print!("{}", self.board);
-                print!(
-                    "White bb: {}\n black bb: {}",
-                    self.white_bitboard, self.black_bitboard
-                );
-                println!("{:?}", self);
-            }
             let attacking_piece = attacking_square.piece().unwrap();
             let attacked_squares = match (attacking_piece.color, attacking_piece.kind) {
                 (White, Pawn) => WHITE_PAWN_RAY_ATTACKS[attacker_idx],
