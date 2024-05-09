@@ -6,10 +6,10 @@ pub mod fen;
 pub mod move_generation;
 use board_elements::PieceColor;
 pub mod chess_board;
-pub mod engine;
 pub mod evaluation;
 pub mod move_ordering;
 mod ray_attacks;
+pub mod search;
 const DEPTH: u8 = 5;
 use crate::board_elements::PieceColor::*;
 
@@ -37,7 +37,7 @@ fn main() {
             println!("{game_winner}");
             return;
         }
-        let (best_eval, best_move) = engine::search(&board_state, DEPTH);
+        let (best_eval, best_move) = search::search(&board_state, DEPTH);
         moves += 1;
         let best_move = best_move.unwrap();
         let absolute_eval = best_eval
