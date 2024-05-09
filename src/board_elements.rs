@@ -398,6 +398,7 @@ impl std::fmt::Display for ChessCell {
 pub struct ChessMove {
     pub start: ChessCell,
     pub dest: ChessCell,
+    pub promotion: Option<Piece>,
 }
 impl std::fmt::Display for ChessMove {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -414,9 +415,21 @@ impl From<(ChessCell, ChessCell)> for ChessMove {
         ChessMove {
             start: cells.0,
             dest: cells.1,
+            promotion: None,
         }
     }
 }
+
+impl From<(ChessCell, ChessCell, Piece)> for ChessMove {
+    fn from(value: (ChessCell, ChessCell, Piece)) -> Self {
+        ChessMove {
+            start: value.0,
+            dest: value.1,
+            promotion: Some(value.2),
+        }
+    }
+}
+
 impl From<CastlingType> for ChessMove {
     fn from(value: CastlingType) -> Self {
         let (start, dest) = match value {
@@ -425,7 +438,11 @@ impl From<CastlingType> for ChessMove {
             CastlingType::BlackKingSide => (E8, G8),
             CastlingType::BlackQueenSide => (E8, C8),
         };
-        ChessMove { start, dest }
+        ChessMove {
+            start,
+            dest,
+            promotion: None,
+        }
     }
 }
 impl From<ChessCell> for CastlingType {
@@ -436,14 +453,6 @@ impl From<ChessCell> for CastlingType {
             A8 => CastlingType::BlackQueenSide,
             H8 => CastlingType::BlackKingSide,
             _ => unreachable!(),
-        }
-    }
-}
-impl ChessMove {
-    pub fn reverse(self) -> ChessMove {
-        ChessMove {
-            start: self.dest,
-            dest: self.start,
         }
     }
 }

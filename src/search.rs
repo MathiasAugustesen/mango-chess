@@ -57,8 +57,8 @@ fn negamax(board_state: &BoardState, depth: u8, alpha: i32, beta: i32) -> i32 {
 
 #[cfg(test)]
 mod tests {
+    use crate::board_state::BoardState;
     use crate::constants::*;
-    use crate::{board_elements::ChessMove, board_state::BoardState};
 
     use super::search;
 
@@ -72,12 +72,6 @@ mod tests {
         let (eval, best_move) = search(&board_state, 3);
 
         assert!(eval > 1_000_000);
-        assert_eq!(
-            best_move,
-            Some(ChessMove {
-                start: D5,
-                dest: F6
-            })
-        )
+        assert_eq!(best_move, Some((D5, F6).into()))
     }
 }
