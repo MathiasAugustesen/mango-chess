@@ -275,16 +275,16 @@ mod tests {
 
     #[test]
     fn generate_moves_from_starting_position() {
-        let mut board_state = BoardState::new_game();
-        let legal_moves = generate_moves(&mut board_state);
+        let board_state = BoardState::new_game();
+        let legal_moves = generate_moves(&board_state);
         assert_eq!(legal_moves.len(), 20);
     }
     #[test]
     fn generate_moves_from_bongcloud() {
-        let mut board_state =
+        let board_state =
             BoardState::from_fen("rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPPKPPP/RNBQ1BNR b kq - 1 2")
                 .unwrap();
-        let legal_moves = generate_moves(&mut board_state);
+        let legal_moves = generate_moves(&board_state);
         assert_eq!(legal_moves.len(), 29);
     }
 

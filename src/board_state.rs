@@ -190,7 +190,7 @@ impl BoardState {
     pub fn is_terminal(&self) -> bool {
         let moves = generate_moves(self);
 
-        moves.len() == 0
+        moves.is_empty()
     }
 
     pub fn terminal_eval(&self) -> i32 {
@@ -232,7 +232,7 @@ impl BoardState {
     // Returns true if any of the enemy pieces attack the target.
     pub fn square_is_attacked(&self, target_square: ChessCell, attacker: PieceColor) -> bool {
         let ray_attackers = self.ray_attackers(target_square, attacker);
-        if ray_attackers.len() == 0 {
+        if ray_attackers.is_empty() {
             return false;
         }
         let mut enemy_moves: Vec<ChessMove> = Vec::new();
@@ -294,7 +294,7 @@ impl BoardState {
         let white_king_location = ChessCell(100, 100);
         let black_king_location = ChessCell(100, 100);
         let castling_rights = CastlingRights::all_castling_rights();
-        return BoardState {
+        BoardState {
             board,
             to_move,
             white_bitboard,
@@ -305,7 +305,7 @@ impl BoardState {
             en_passant: None,
             eval: 0,
             castling_rights,
-        };
+        }
     }
     pub fn new_game() -> BoardState {
         let board = ChessBoard::new();
@@ -516,10 +516,10 @@ mod tests {
         let board_state = BoardState::new_game();
         let board = board_state.board;
         let white_king_square = board.square(E1);
-        assert_eq!(white_king_square.is_empty_or_enemy_of(Black), true);
-        assert_eq!(white_king_square.is_empty_or_enemy_of(White), false);
+        assert!(white_king_square.is_empty_or_enemy_of(Black));
+        assert!(!white_king_square.is_empty_or_enemy_of(White));
         let c6 = board.square(C6);
-        assert_eq!(c6.is_empty_or_enemy_of(White), true);
+        assert!(c6.is_empty_or_enemy_of(White));
     }
 
     #[test]

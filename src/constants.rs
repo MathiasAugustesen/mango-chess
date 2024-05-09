@@ -20,7 +20,7 @@ pub const RANK_7: usize = 8;
 pub const RANK_8: usize = 9;
 pub const WHITE_STARTING_BITBOARD: BitBoard = BitBoard(0xFFFF);
 pub const BLACK_STARTING_BITBOARD: BitBoard = BitBoard(WHITE_STARTING_BITBOARD.0 << 48);
-pub const STARTING_FEN_STRING: &'static str =
+pub const STARTING_FEN_STRING: &str =
     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 pub const A1: ChessCell = ChessCell(RANK_1, A_FILE);

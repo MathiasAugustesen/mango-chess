@@ -99,10 +99,7 @@ impl Square {
         }
     }
     pub fn has_piece(self) -> bool {
-        match self {
-            Square::Full(_) => true,
-            _ => false,
-        }
+        matches!(self, Square::Full(_))
     }
     pub fn is_empty_or_enemy_of(self, color: PieceColor) -> bool {
         match self {
@@ -428,10 +425,7 @@ impl From<CastlingType> for ChessMove {
             CastlingType::BlackKingSide => (E8, G8),
             CastlingType::BlackQueenSide => (E8, C8),
         };
-        ChessMove {
-            start: ChessCell::from(start),
-            dest: ChessCell::from(dest),
-        }
+        ChessMove { start, dest }
     }
 }
 impl From<ChessCell> for CastlingType {

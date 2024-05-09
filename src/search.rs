@@ -10,7 +10,7 @@ pub fn search(board_state: &BoardState, depth: u8) -> (i32, Option<ChessMove>) {
     let mut best_move = None;
     let mut possible_moves = generate_pseudo_moves_for_player(board_state);
 
-    possible_moves.sort_by_cached_key(|&mov| -move_sort(&board_state, mov));
+    possible_moves.sort_by_cached_key(|&mov| -move_sort(board_state, mov));
     for mov in possible_moves {
         let mut copy_board = board_state.clone();
         copy_board.make_move(mov);
@@ -38,7 +38,7 @@ fn negamax(board_state: &BoardState, depth: u8, alpha: i32, beta: i32) -> i32 {
     let mut best_eval = -i32::MAX;
     let mut available_pseudo_moves = generate_pseudo_moves_for_player(board_state);
 
-    available_pseudo_moves.sort_by_cached_key(|&mov| -move_sort(&board_state, mov));
+    available_pseudo_moves.sort_by_cached_key(|&mov| -move_sort(board_state, mov));
     for mov in available_pseudo_moves {
         let mut copy_board = board_state.clone();
         copy_board.make_move(mov);

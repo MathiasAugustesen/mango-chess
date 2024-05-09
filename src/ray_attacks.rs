@@ -31,9 +31,7 @@ pub fn _generate_white_pawn_ray_attacks() -> Vec<Vec<usize>> {
     let mut ray_attack_lookup: Vec<Vec<usize>> = Vec::new();
     for rank in RANK_1..=RANK_8 {
         for file in A_FILE..=H_FILE {
-            let mut attacked_squares: Vec<ChessCell> = Vec::new();
-            attacked_squares.push(ChessCell(rank + 1, file - 1));
-            attacked_squares.push(ChessCell(rank + 1, file + 1));
+            let attacked_squares = [ChessCell(rank + 1, file - 1), ChessCell(rank + 1, file + 1)];
             let filtered_attacked_squares: Vec<usize> = attacked_squares
                 .iter()
                 .filter(|&&square| !square.is_aether())
@@ -48,9 +46,7 @@ pub fn _generate_black_pawn_ray_attacks() -> Vec<Vec<usize>> {
     let mut ray_attack_lookup: Vec<Vec<usize>> = Vec::new();
     for rank in RANK_1..=RANK_8 {
         for file in A_FILE..=H_FILE {
-            let mut attacked_squares: Vec<ChessCell> = Vec::new();
-            attacked_squares.push(ChessCell(rank - 1, file - 1));
-            attacked_squares.push(ChessCell(rank - 1, file + 1));
+            let attacked_squares = [ChessCell(rank - 1, file - 1), ChessCell(rank - 1, file + 1)];
             let filtered_attacked_squares: Vec<usize> = attacked_squares
                 .iter()
                 .filter(|&&square| !square.is_aether())
