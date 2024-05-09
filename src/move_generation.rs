@@ -95,13 +95,25 @@ fn white_pawn_moves(board_state: &BoardState, position: ChessCell, moves: &mut V
     let one_forward = ChessCell(rank + 1, file);
     let target = board_state.board.square(one_forward);
     if target.is_empty() {
-        moves.push((position, one_forward).into());
+        if rank == RANK_7 {
+            let promotion_pieces = [
+                Piece::knight(White),
+                Piece::bishop(White),
+                Piece::rook(White),
+                Piece::queen(White),
+            ];
 
-        if rank == RANK_2 {
-            let two_forward = ChessCell(rank + 2, file);
-            let target = board_state.board.square(two_forward);
-            if target.is_empty() {
-                moves.push((position, two_forward).into());
+            for piece in promotion_pieces {
+                moves.push((position, one_forward, piece).into())
+            }
+        } else {
+            moves.push((position, one_forward).into());
+            if rank == RANK_2 {
+                let two_forward = ChessCell(rank + 2, file);
+                let target = board_state.board.square(two_forward);
+                if target.is_empty() {
+                    moves.push((position, two_forward).into());
+                }
             }
         }
     }
@@ -124,13 +136,26 @@ fn black_pawn_moves(board_state: &BoardState, position: ChessCell, moves: &mut V
     let one_forward = ChessCell(rank - 1, file);
     let target = board_state.board.square(one_forward);
     if target.is_empty() {
-        moves.push((position, one_forward).into());
+        if rank == RANK_2 {
+            let promotion_pieces = [
+                Piece::knight(Black),
+                Piece::bishop(Black),
+                Piece::rook(Black),
+                Piece::queen(Black),
+            ];
 
-        if rank == RANK_7 {
-            let two_forward = ChessCell(rank - 2, file);
-            let target = board_state.board.square(two_forward);
-            if target.is_empty() {
-                moves.push((position, two_forward).into());
+            for piece in promotion_pieces {
+                moves.push((position, one_forward, piece).into())
+            }
+        } else {
+            moves.push((position, one_forward).into());
+
+            if rank == RANK_7 {
+                let two_forward = ChessCell(rank - 2, file);
+                let target = board_state.board.square(two_forward);
+                if target.is_empty() {
+                    moves.push((position, two_forward).into());
+                }
             }
         }
     }
@@ -266,7 +291,7 @@ pub fn generate_en_passant_moves(board_state: &BoardState) -> Vec<ChessMove> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        board_elements::{Piece, PieceColor, PieceKind},
+        board_elements::{ChessMove, Piece, PieceColor, PieceKind},
         board_state::BoardState,
     };
 
@@ -323,5 +348,41 @@ mod tests {
         let legal_moves = generate_moves(&board_state);
         assert!(legal_moves.contains(&(E5, F6).into()));
         assert!(legal_moves.contains(&(G5, F6).into()));
+    }
+
+    #[test]
+    fn game_with_possible_promotion_for_white_contains_correct_moves() {
+        let board_state = BoardState::from_fen("7k/P7/8/8/8/8/8/7K w - - 0 1").unwrap();
+
+        let legal_moves = generate_moves(&board_state);
+
+        let expected_moves: Vec<ChessMove> = vec![
+            (A7, A8, Piece::knight(PieceColor::White)).into(),
+            (A7, A8, Piece::bishop(PieceColor::White)).into(),
+            (A7, A8, Piece::rook(PieceColor::White)).into(),
+            (A7, A8, Piece::queen(PieceColor::White)).into(),
+        ];
+
+        for mov in expected_moves {
+            assert!(legal_moves.contains(&mov))
+        }
+    }
+
+    #[test]
+    fn game_with_possible_promotion_for_black_contains_correct_moves() {
+        let board_state = BoardState::from_fen("7k/8/8/8/8/8/p7/7K b - - 0 1").unwrap();
+
+        let legal_moves = generate_moves(&board_state);
+
+        let expected_moves: Vec<ChessMove> = vec![
+            (A2, A1, Piece::knight(PieceColor::Black)).into(),
+            (A2, A1, Piece::bishop(PieceColor::Black)).into(),
+            (A2, A1, Piece::rook(PieceColor::Black)).into(),
+            (A2, A1, Piece::queen(PieceColor::Black)).into(),
+        ];
+
+        for mov in expected_moves {
+            assert!(legal_moves.contains(&mov))
+        }
     }
 }

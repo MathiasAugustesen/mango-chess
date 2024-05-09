@@ -90,10 +90,19 @@ impl BoardState {
         if let Some(captured_piece) = self.board.square(mov.dest).piece() {
             *eval_increment += evaluate_piece(captured_piece, mov.dest.as_index());
         }
+
         *self.board.square_mut(mov.start) = Square::Empty;
-        *self.board.square_mut(mov.dest) = Square::Full(moving_piece);
+
+        if let Some(promoted_piece) = mov.promotion {
+            *self.board.square_mut(mov.dest) = Square::Full(promoted_piece);
+            *eval_increment += evaluate_piece(promoted_piece, mov.dest.as_index())
+                - evaluate_piece(moving_piece, mov.start.as_index());
+        } else {
+            *self.board.square_mut(mov.dest) = Square::Full(moving_piece);
+            *eval_increment += positional_value_delta(moving_piece, mov);
+        }
+
         self.update_bitboards(mov);
-        *eval_increment += positional_value_delta(moving_piece, mov);
     }
     pub fn make_move(&mut self, mov: ChessMove) {
         let start = mov.start;
@@ -372,7 +381,7 @@ impl BoardState {
             eval: 0,
             castling_rights,
         };
-        board_state.eval = evaluate(&board_state);
+        board_state.eval = evaluate(&board_state) * board_state.to_move.signum();
         Ok(board_state)
     }
 }
@@ -533,5 +542,42 @@ mod tests {
                 .unwrap();
 
         assert_eq!(board_state.en_passant, Some(F6));
+    }
+
+    #[test]
+    fn white_promoting_to_queen_in_good_scenario_leads_to_overwhelming_victory_eval() {
+        let mut board_state = BoardState::from_fen("7k/P7/8/8/8/8/8/7K w - - 0 1").unwrap();
+
+        assert!(generate_moves(&board_state).contains(&(A7, A8, Piece::queen(White)).into()));
+
+        let eval_before = board_state.eval;
+
+        board_state.make_move((A7, A8, Piece::queen(White)).into());
+
+        let eval_after = board_state.eval;
+
+        assert!((eval_after - eval_before) > 600);
+    }
+
+    #[test]
+    fn black_promoting_to_queen_in_good_scenario_leads_to_overwhelming_victory_eval() {
+        let mut board_state = BoardState::from_fen("7k/8/8/8/8/8/p7/7K b - - 0 1").unwrap();
+
+        assert!(generate_moves(&board_state).contains(&(A2, A1, Piece::queen(Black)).into()));
+
+        let eval_before = board_state.eval;
+
+        board_state.make_move((A2, A1, Piece::queen(Black)).into());
+
+        let eval_after = board_state.eval;
+
+        assert!((eval_after - eval_before) < -600);
+    }
+
+    #[test]
+    fn eval_in_drawish_game_is_close_to_zero() {
+        let board_state = BoardState::from_fen("7k/8/8/8/8/8/8/7K w - - 0 1").unwrap();
+
+        assert!(i32::abs(board_state.eval) < 50)
     }
 }
