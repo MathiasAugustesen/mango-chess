@@ -359,7 +359,7 @@ impl BoardState {
             white_king_location,
             black_king_location,
             last_move: None,
-            en_passant: None,
+            en_passant: _en_passant_square,
             eval: 0,
             castling_rights,
         };
@@ -515,5 +515,14 @@ mod tests {
         assert_eq!(white_king_square.is_empty_or_enemy_of(White), false);
         let c6 = board.square(C6);
         assert_eq!(c6.is_empty_or_enemy_of(White), true);
+    }
+
+    #[test]
+    fn parsing_fen_with_en_passant_has_correct_position() {
+        let board_state =
+            BoardState::from_fen("rnbqkbnr/ppp1p1pp/8/3pPp2/8/8/PPPP1PPP/RNBQKBNR w KQkq f6 0 3")
+                .unwrap();
+
+        assert_eq!(board_state.en_passant, Some(F6));
     }
 }
