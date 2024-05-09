@@ -315,7 +315,6 @@ mod tests {
     #[test]
     fn en_passant_with_two_pawns_can_both_capture() {
         let mut board_state =
-        // TODO: fix en passant not populated correctly from fen
             BoardState::from_fen("rnbqkbnr/pp2pppp/8/2ppP1P1/8/8/PPPP1P1P/RNBQKBNR b KQkq - 0 4")
                 .unwrap();
 

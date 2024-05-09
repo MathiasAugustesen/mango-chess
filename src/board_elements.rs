@@ -375,8 +375,8 @@ impl FromStr for ChessCell {
         if row.is_none() {
             return Err("Failed to parse ChessCell from string: rank was not a valid number");
         }
-        let rank = BOARD_END - row.unwrap() as usize;
-        Ok(ChessCell(rank, file + BOARD_START))
+        let rank = row.unwrap() as usize;
+        Ok(ChessCell(rank + 1, file + BOARD_START))
     }
 }
 impl std::fmt::Display for ChessCell {
@@ -451,5 +451,29 @@ impl ChessMove {
             start: self.dest,
             dest: self.start,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn parsing_f6_from_string_leads_to_correct_square() {
+        assert_eq!(ChessCell::from_str("f6"), Ok(F6));
+    }
+
+    #[test]
+    fn parsing_g1_from_string_leads_to_correct_square() {
+        assert_eq!(ChessCell::from_str("g1"), Ok(G1));
+    }
+
+    #[test]
+    fn converting_f6_to_string_leads_to_correct_string() {
+        assert_eq!(F6.to_string(), "f6")
+    }
+
+    #[test]
+    fn converting_g1_to_string_leads_to_correct_string() {
+        assert_eq!(G1.to_string(), "g1")
     }
 }
