@@ -74,9 +74,6 @@ impl Square {
     pub fn is_aether(self) -> bool {
         self == Square::Aether
     }
-    pub fn is_inside_board(self) -> bool {
-        self != Square::Aether
-    }
     pub fn is_empty(self) -> bool {
         self == Square::Empty
     }
@@ -225,18 +222,6 @@ pub enum CastlingType {
     BlackQueenSide,
 }
 impl CastlingType {
-    pub fn color_king_side(color: PieceColor) -> CastlingType {
-        match color {
-            White => CastlingType::WhiteKingSide,
-            Black => CastlingType::BlackKingSide,
-        }
-    }
-    pub fn color_queen_side(color: PieceColor) -> CastlingType {
-        match color {
-            White => CastlingType::WhiteQueenSide,
-            Black => CastlingType::BlackQueenSide,
-        }
-    }
     pub fn direction(self) -> i8 {
         match self {
             CastlingType::WhiteKingSide | CastlingType::BlackKingSide => 1,
@@ -252,14 +237,6 @@ pub struct CastlingRights {
     pub black_queen_side_castling: bool,
 }
 impl CastlingRights {
-    pub fn no_castling_rights() -> CastlingRights {
-        CastlingRights {
-            white_king_side_castling: false,
-            white_queen_side_castling: false,
-            black_king_side_castling: false,
-            black_queen_side_castling: false,
-        }
-    }
     pub fn all_castling_rights() -> CastlingRights {
         CastlingRights {
             white_king_side_castling: true,
@@ -299,9 +276,6 @@ impl BitBoard {
     pub fn add_piece(&mut self, index: usize) {
         let mask = 1 << index;
         self.0 |= mask;
-    }
-    pub fn bits_mut(&mut self) -> &mut u64 {
-        &mut self.0
     }
 }
 impl std::fmt::Display for BitBoard {
@@ -403,11 +377,6 @@ pub struct ChessMove {
 impl std::fmt::Display for ChessMove {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}->{}", self.start, self.dest)
-    }
-}
-pub fn display_moves(moves: &[ChessMove]) {
-    for mov in moves {
-        print!("{}, ", mov);
     }
 }
 impl From<(ChessCell, ChessCell)> for ChessMove {

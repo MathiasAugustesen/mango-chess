@@ -188,18 +188,6 @@ impl BoardState {
 
         opposing_player_bitboard.remove_piece(mov.dest.as_index());
     }
-    pub fn downgrade_bitboards(&mut self, mov: ChessMove, last_capture: Option<Piece>) {
-        let (current_player_bitboard, opposing_player_bitboard) = match self.to_move {
-            White => (&mut self.white_bitboard, &mut self.black_bitboard),
-            Black => (&mut self.black_bitboard, &mut self.white_bitboard),
-        };
-        current_player_bitboard.remove_piece(mov.start.as_index());
-        current_player_bitboard.add_piece(mov.dest.as_index());
-
-        if last_capture.is_some() {
-            opposing_player_bitboard.add_piece(mov.start.as_index());
-        }
-    }
     pub fn is_terminal(&self) -> bool {
         let moves = generate_moves(self);
 
