@@ -235,15 +235,6 @@ impl BoardState {
         if ray_attackers.len() == 0 {
             return false;
         }
-        /*
-        This block perform the regular 'check every piece' way of validating pseudo moves.
-        let mut ray_attackers: Vec<(Piece, ChessCell)> = Vec::new();
-        let enemy_pieces = self.get_piece_positions(self.to_move);
-        for piece_position in enemy_pieces {
-            let piece = self.board[piece_position.0][piece_position.1].piece();
-            ray_attackers.push((piece, piece_position));
-        }
-        */
         let mut enemy_moves: Vec<ChessMove> = Vec::new();
         for (piece, position) in ray_attackers {
             // TODO: Fix looking at already checked moves
