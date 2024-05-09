@@ -69,6 +69,9 @@ impl BoardState {
     pub fn increment_eval(&mut self, eval_increment: i32) {
         self.eval += eval_increment * self.to_move.signum()
     }
+    pub fn pov_eval(&self) -> i32 {
+        self.eval * self.to_move.signum()
+    }
     #[inline]
     fn update_king_position(&mut self, dest: ChessCell) {
         match self.to_move {
