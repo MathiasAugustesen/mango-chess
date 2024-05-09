@@ -7,7 +7,7 @@ pub mod move_generation;
 use board_elements::PieceColor;
 pub mod chess_board;
 pub mod evaluation;
-pub mod move_ordering;
+pub mod move_scoring;
 mod ray_attacks;
 pub mod search;
 const DEPTH: u8 = 5;

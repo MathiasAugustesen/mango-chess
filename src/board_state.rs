@@ -17,7 +17,7 @@ use crate::fen::castling_rights_from_fen;
 use crate::fen::en_passant_square_from_fen;
 use crate::move_generation::generate_moves;
 use crate::move_generation::generate_pseudo_moves_for_piece;
-use crate::move_ordering::positional_value_delta;
+use crate::move_scoring::positional_value_delta;
 use crate::ray_attacks::*;
 use crate::GameResult;
 
