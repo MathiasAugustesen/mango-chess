@@ -4,7 +4,7 @@ use crate::{
     evaluation::positional_value,
 };
 
-pub fn move_sort(board_state: &BoardState, mov: ChessMove) -> i32 {
+pub fn move_score(board_state: &BoardState, mov: ChessMove) -> i32 {
     let moving_piece = board_state.board.square(mov.start).piece().unwrap();
 
     let mut move_score = positional_value_delta(moving_piece, mov);
