@@ -29,6 +29,9 @@ pub fn search(board_state: &BoardState, depth: u8) -> (i32, Option<ChessMove>) {
 }
 
 fn negamax(board_state: &BoardState, depth: u8, alpha: i32, beta: i32) -> i32 {
+    if board_state.is_terminal() {
+        return board_state.terminal_eval();
+    }
     if depth == 0 {
         return board_state.eval * board_state.to_move.signum();
     }
@@ -50,4 +53,31 @@ fn negamax(board_state: &BoardState, depth: u8, alpha: i32, beta: i32) -> i32 {
         }
     }
     best_eval
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::constants::*;
+    use crate::{board_elements::ChessMove, board_state::BoardState};
+
+    use super::search;
+
+    #[test]
+    fn mate_in_two_has_correct_eval_and_move() {
+        let board_state = BoardState::from_fen(
+            "r2qkb1r/pp2nppp/3p4/2pNN1B1/2BnP3/3P4/PPP2PPP/R2bK2R w KQkq - 1 0",
+        )
+        .unwrap();
+
+        let (eval, best_move) = search(&board_state, 3);
+
+        assert!(eval > 1_000_000);
+        assert_eq!(
+            best_move,
+            Some(ChessMove {
+                start: D5,
+                dest: F6
+            })
+        )
+    }
 }

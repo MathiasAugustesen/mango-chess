@@ -15,6 +15,7 @@ use crate::evaluation::evaluate_piece;
 use crate::fen;
 use crate::fen::castling_rights_from_fen;
 use crate::fen::en_passant_square_from_fen;
+use crate::move_generation::generate_moves;
 use crate::move_generation::generate_pseudo_moves_for_piece;
 use crate::move_ordering::positional_value_delta;
 use crate::ray_attacks::*;
@@ -184,6 +185,19 @@ impl BoardState {
 
         if last_capture.is_some() {
             opposing_player_bitboard.add_piece(mov.start.as_index());
+        }
+    }
+    pub fn is_terminal(&self) -> bool {
+        let moves = generate_moves(self);
+
+        moves.len() == 0
+    }
+
+    pub fn terminal_eval(&self) -> i32 {
+        match self.square_is_attacked(self.king_location_of(self.to_move), self.to_move.opposite())
+        {
+            true => i32::MIN / 2,
+            false => 0,
         }
     }
     pub fn get_game_winner(&self) -> GameResult {
