@@ -157,6 +157,7 @@ impl BoardState {
         let rook_move = ChessMove {
             start: rook_start,
             dest: rook_dest,
+            promotion: None,
         };
         self.move_piece(rook_move, eval_increment);
     }
