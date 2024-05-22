@@ -10,6 +10,7 @@ pub mod evaluation;
 pub mod move_scoring;
 mod ray_attacks;
 pub mod search;
+mod zobrist_hashing;
 const DEPTH: u8 = 5;
 use crate::board_elements::PieceColor::*;
 

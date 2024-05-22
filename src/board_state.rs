@@ -35,6 +35,7 @@ pub struct BoardState {
     pub en_passant: Option<ChessCell>,
     pub eval: i32,
     pub castling_rights: CastlingRights,
+    pub zobrist_key: u64,
 }
 impl BoardState {
     #[inline]
@@ -306,6 +307,7 @@ impl BoardState {
             en_passant: None,
             eval: 0,
             castling_rights,
+            zobrist_key: 0,
         }
     }
     pub fn new_game() -> BoardState {
@@ -329,6 +331,7 @@ impl BoardState {
             en_passant: None,
             eval: 0,
             castling_rights,
+            zobrist_key: 0,
         };
         board_state.eval = evaluate(&board_state);
         board_state
@@ -368,6 +371,7 @@ impl BoardState {
             en_passant: _en_passant_square,
             eval: 0,
             castling_rights,
+            zobrist_key: 0,
         };
         board_state.eval = evaluate(&board_state) * board_state.to_move.signum();
         Ok(board_state)
