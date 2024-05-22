@@ -42,6 +42,13 @@ impl PieceColor {
             Black => RANK_4,
         }
     }
+
+    pub fn index(self) -> usize {
+        match self {
+            White => 0,
+            Black => 1,
+        }
+    }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PieceKind {
@@ -182,7 +189,7 @@ impl Piece {
     }
     #[inline]
     pub fn index(self) -> usize {
-        self.kind.index()
+        self.kind.index() * self.color.index()
     }
     pub fn value(self) -> i32 {
         match self.kind {
@@ -226,6 +233,15 @@ impl CastlingType {
         match self {
             CastlingType::WhiteKingSide | CastlingType::BlackKingSide => 1,
             CastlingType::WhiteQueenSide | CastlingType::BlackQueenSide => -1,
+        }
+    }
+
+    pub fn index(self) -> usize {
+        match self {
+            CastlingType::WhiteKingSide => 0,
+            CastlingType::WhiteQueenSide => 1,
+            CastlingType::BlackKingSide => 2,
+            CastlingType::BlackQueenSide => 3,
         }
     }
 }

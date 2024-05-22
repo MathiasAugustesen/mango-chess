@@ -29,7 +29,7 @@ pub fn positional_value(piece: Piece, pos: usize) -> i32 {
         White => 63 - pos,
         Black => pos,
     };
-    POSITION_VALUES[piece.index()][position_values_index]
+    POSITION_VALUES[piece.kind.index()][position_values_index]
 }
 const POSITION_VALUES: [[i32; 64]; 6] = [
     PAWN_POSITION_VALUES,
