@@ -87,9 +87,11 @@ impl BoardState {
         *self.board.square_mut(square) = Square::Empty;
         self.remove_from_bitboard(square);
     }
-    pub fn move_piece(&mut self, mov: ChessMove, eval_increment: &mut i32) {
+    // returns captured piece, if any
+    pub fn move_piece(&mut self, mov: ChessMove, eval_increment: &mut i32) -> Option<Piece> {
         let moving_piece = self.board.square(mov.start).piece().unwrap();
-        if let Some(captured_piece) = self.board.square(mov.dest).piece() {
+        let captured_piece = self.board.square(mov.dest).piece();
+        if let Some(captured_piece) = captured_piece {
             *eval_increment += evaluate_piece(captured_piece, mov.dest.as_index());
         }
 
@@ -105,8 +107,14 @@ impl BoardState {
         }
 
         self.update_bitboards(mov);
+
+        captured_piece
     }
     pub fn make_move(&mut self, mov: ChessMove) {
+        // Used for zobrist key incremental updates
+        let en_passant_file_before = self.en_passant.map(|cell| cell.1);
+        let castling_rights_before = self.castling_rights;
+
         let start = mov.start;
         let dest = mov.dest;
         self.last_move = Some(mov);
@@ -151,12 +159,23 @@ impl BoardState {
             self.en_passant = Some(en_passant_square);
         }
 
-        self.move_piece(mov, &mut eval_increment);
+        let captured_piece = self.move_piece(mov, &mut eval_increment);
 
         self.increment_eval(eval_increment);
 
         self.swap_to_move();
-        self.set_zobrist_key_from_scratch();
+
+        let en_passant_file_after = self.en_passant.map(|cell| cell.1);
+        let removed_castling_rights = self.castling_rights.diff_from(castling_rights_before);
+
+        self.set_zobrist_key_from_move(
+            mov,
+            moving_piece,
+            captured_piece,
+            en_passant_file_before,
+            en_passant_file_after,
+            removed_castling_rights,
+        );
     }
     fn resolve_castling(&mut self, mov: ChessMove, eval_increment: &mut i32) {
         let (rook_start, rook_dest) = match mov.dest {
@@ -263,6 +282,42 @@ impl BoardState {
         }
 
         self.zobrist_key = zobrist_key;
+    }
+
+    fn set_zobrist_key_from_move(
+        &mut self,
+        mov: ChessMove,
+        moving_piece: Piece,
+        captured_piece: Option<Piece>,
+        previous_en_passant_file: Option<usize>,
+        new_en_passant_file: Option<usize>,
+        removed_castling_rights: Vec<CastlingType>,
+    ) {
+        let mut incremented_zobrist_key = 0;
+
+        incremented_zobrist_key ^=
+            ZobristOracle::piece_bitstring(moving_piece, mov.start.as_index());
+        incremented_zobrist_key ^=
+            ZobristOracle::piece_bitstring(moving_piece, mov.dest.as_index());
+
+        if let Some(captured_piece) = captured_piece {
+            incremented_zobrist_key ^=
+                ZobristOracle::piece_bitstring(captured_piece, mov.dest.as_index());
+        }
+
+        if let Some(old_file) = previous_en_passant_file {
+            incremented_zobrist_key ^= ZobristOracle::en_passant_bitstring(old_file);
+        }
+
+        if let Some(new_file) = new_en_passant_file {
+            incremented_zobrist_key ^= ZobristOracle::en_passant_bitstring(new_file);
+        }
+
+        for castling_right in removed_castling_rights {
+            incremented_zobrist_key ^= ZobristOracle::castling_right_bitstring(castling_right);
+        }
+
+        self.zobrist_key ^= incremented_zobrist_key;
     }
     // First, a list of all enemy pieces that x-ray the target is generated with a lookup table.
     // If this list is empty, the square is safe.

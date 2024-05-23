@@ -281,6 +281,23 @@ impl CastlingRights {
             }
         }
     }
+    pub fn diff_from(&self, other: CastlingRights) -> Vec<CastlingType> {
+        let mut castling_rights_diff = vec![];
+        if self.white_king_side_castling != other.white_king_side_castling {
+            castling_rights_diff.push(CastlingType::WhiteKingSide);
+        }
+        if self.white_queen_side_castling != other.white_queen_side_castling {
+            castling_rights_diff.push(CastlingType::WhiteQueenSide);
+        }
+        if self.black_king_side_castling != other.black_king_side_castling {
+            castling_rights_diff.push(CastlingType::BlackKingSide);
+        }
+        if self.black_queen_side_castling != other.black_queen_side_castling {
+            castling_rights_diff.push(CastlingType::BlackQueenSide);
+        }
+
+        castling_rights_diff
+    }
 }
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct BitBoard(pub u64);
