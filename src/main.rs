@@ -11,7 +11,7 @@ pub mod move_scoring;
 mod ray_attacks;
 pub mod search;
 mod zobrist_hashing;
-const DEPTH: u8 = 5;
+const DEPTH: u8 = 4;
 use crate::board_elements::PieceColor::*;
 
 pub enum GameResult {

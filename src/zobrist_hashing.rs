@@ -1,13 +1,13 @@
-#![allow(dead_code)]
-
-use crate::board_elements::{CastlingType, Piece};
+use crate::{
+    board_elements::{CastlingType, Piece},
+    constants::BOARD_START,
+};
 
 const COLORS_IN_CHESS: usize = 2;
 const KINDS_OF_CHESS_PIECES: usize = 6;
 const SQUARES_ON_BOARD: usize = 64;
 const CASTLING_RIGHTS: usize = 4;
 const POSSIBLE_EN_PASSANT_FILES: usize = 8;
-const BITSTRING_INDICATING_BLACK_TO_MOVE: usize = 1;
 
 // Requries rand, so commented out to keep zero dependencies
 /*pub fn _generate_zobrist_bitstrings() {
@@ -37,7 +37,7 @@ impl ZobristOracle {
     }
 
     pub fn en_passant_bitstring(file: usize) -> u64 {
-        let file_without_offset = file - 2;
+        let file_without_offset = file - BOARD_START;
         EN_PASSANT_FILE_BITSTRINGS[file_without_offset]
     }
 }
