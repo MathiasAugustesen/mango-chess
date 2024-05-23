@@ -19,6 +19,7 @@ use crate::move_generation::generate_moves;
 use crate::move_generation::generate_pseudo_moves_for_piece;
 use crate::move_scoring::positional_value_delta;
 use crate::ray_attacks::*;
+use crate::zobrist_hashing::ZobristOracle;
 use crate::GameResult;
 
 #[derive(Clone, PartialEq, Debug)]
@@ -155,6 +156,7 @@ impl BoardState {
         self.increment_eval(eval_increment);
 
         self.swap_to_move();
+        self.set_zobrist_key_from_scratch();
     }
     fn resolve_castling(&mut self, mov: ChessMove, eval_increment: &mut i32) {
         let (rook_start, rook_dest) = match mov.dest {
@@ -228,6 +230,39 @@ impl BoardState {
             White => self.white_king_location,
             Black => self.black_king_location,
         }
+    }
+    fn set_zobrist_key_from_scratch(&mut self) {
+        let mut zobrist_key: u64 = 0;
+
+        let all_piece_positions = self
+            .get_piece_positions(White)
+            .into_iter()
+            .chain(self.get_piece_positions(Black));
+
+        for piece_position in all_piece_positions {
+            let piece = self.board.square(piece_position).piece().unwrap();
+            zobrist_key ^= ZobristOracle::piece_bitstring(piece, piece_position.as_index());
+        }
+
+        let all_castling_rights = self
+            .available_castling_types(White)
+            .into_iter()
+            .chain(self.available_castling_types(Black));
+
+        for castling_right in all_castling_rights {
+            zobrist_key ^= ZobristOracle::castling_right_bitstring(castling_right);
+        }
+
+        if let Some(en_passant) = self.en_passant {
+            let file = en_passant.1;
+            zobrist_key ^= ZobristOracle::en_passant_bitstring(file);
+        }
+
+        if self.to_move == Black {
+            zobrist_key ^= ZobristOracle::black_to_move_bitstring();
+        }
+
+        self.zobrist_key = zobrist_key;
     }
     // First, a list of all enemy pieces that x-ray the target is generated with a lookup table.
     // If this list is empty, the square is safe.
@@ -334,6 +369,7 @@ impl BoardState {
             zobrist_key: 0,
         };
         board_state.eval = evaluate(&board_state);
+        board_state.set_zobrist_key_from_scratch();
         board_state
     }
     pub fn from_fen(fen: &str) -> Result<BoardState, &str> {
@@ -374,6 +410,7 @@ impl BoardState {
             zobrist_key: 0,
         };
         board_state.eval = evaluate(&board_state) * board_state.to_move.signum();
+        board_state.set_zobrist_key_from_scratch();
         Ok(board_state)
     }
 }
@@ -571,5 +608,33 @@ mod tests {
         let board_state = BoardState::from_fen("7k/8/8/8/8/8/8/7K w - - 0 1").unwrap();
 
         assert!(i32::abs(board_state.eval) < 50)
+    }
+
+    #[test]
+    fn making_moves_and_returning_to_same_position_leads_to_identical_zobrist_key() {
+        let mut board_state = BoardState::new_game();
+
+        let starting_zobrist_key = board_state.zobrist_key;
+        board_state.make_move((B1, C3).into());
+        board_state.make_move((G8, F6).into());
+        board_state.make_move((C3, B1).into());
+        board_state.make_move((F6, G8).into());
+        let zobrist_key_after_return_to_starting_position = board_state.zobrist_key;
+
+        assert_eq!(
+            starting_zobrist_key,
+            zobrist_key_after_return_to_starting_position
+        );
+    }
+
+    #[test]
+    fn making_move_changes_zobrist_key() {
+        let mut board_state = BoardState::new_game();
+        let starting_zobrist_key = board_state.zobrist_key;
+
+        board_state.make_move((E2, E4).into());
+
+        let zobrist_key_after_move = board_state.zobrist_key;
+        assert_ne!(starting_zobrist_key, zobrist_key_after_move);
     }
 }
