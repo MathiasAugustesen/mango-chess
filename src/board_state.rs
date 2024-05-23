@@ -295,6 +295,8 @@ impl BoardState {
     ) {
         let mut incremented_zobrist_key = 0;
 
+        incremented_zobrist_key ^= ZobristOracle::black_to_move_bitstring();
+
         incremented_zobrist_key ^=
             ZobristOracle::piece_bitstring(moving_piece, mov.start.as_index());
         incremented_zobrist_key ^=
@@ -691,5 +693,22 @@ mod tests {
 
         let zobrist_key_after_move = board_state.zobrist_key;
         assert_ne!(starting_zobrist_key, zobrist_key_after_move);
+    }
+
+    #[test]
+    fn returning_to_same_board_position_but_flipped_to_move_is_different_zobrist_key() {
+        let mut board_state =
+            BoardState::from_fen("rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2")
+                .unwrap();
+        let zobrist_key_before = board_state.zobrist_key;
+
+        board_state.make_move((D1, G4).into());
+        board_state.make_move((C8, F5).into());
+        board_state.make_move((G4, E2).into());
+        board_state.make_move((F5, C8).into());
+        board_state.make_move((E2, D1).into());
+
+        let zobrist_key_after = board_state.zobrist_key;
+        assert_ne!(zobrist_key_before, zobrist_key_after);
     }
 }
