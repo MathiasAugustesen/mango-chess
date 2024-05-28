@@ -79,87 +79,111 @@ pub fn generate_pseudo_moves_for_piece(
     }
 }
 fn white_pawn_moves(board_state: &BoardState, position: ChessCell, moves: &mut Vec<ChessMove>) {
+    let mut temp_moves: Vec<ChessMove> = vec![];
+
     let ChessCell(rank, file) = position;
     let left_cap = ChessCell(rank + 1, file - 1);
     let target = board_state.board.square(left_cap);
     if target.is_enemy_of(White) {
-        moves.push((position, left_cap).into())
+        temp_moves.push((position, left_cap).into())
     }
 
     let right_cap = ChessCell(rank + 1, file + 1);
     let target = board_state.board.square(right_cap);
     if target.is_enemy_of(White) {
-        moves.push((position, right_cap).into())
+        temp_moves.push((position, right_cap).into())
     }
 
     let one_forward = ChessCell(rank + 1, file);
     let target = board_state.board.square(one_forward);
     if target.is_empty() {
-        if rank == RANK_7 {
-            let promotion_pieces = [
-                Piece::knight(White),
-                Piece::bishop(White),
-                Piece::rook(White),
-                Piece::queen(White),
-            ];
-
-            for piece in promotion_pieces {
-                moves.push((position, one_forward, piece).into())
-            }
-        } else {
-            moves.push((position, one_forward).into());
-            if rank == RANK_2 {
-                let two_forward = ChessCell(rank + 2, file);
-                let target = board_state.board.square(two_forward);
-                if target.is_empty() {
-                    moves.push((position, two_forward).into());
-                }
+        temp_moves.push((position, one_forward).into());
+        if rank == RANK_2 {
+            let two_forward = ChessCell(rank + 2, file);
+            let target = board_state.board.square(two_forward);
+            if target.is_empty() {
+                temp_moves.push((position, two_forward).into());
             }
         }
     }
+
+    if rank == RANK_7 {
+        let promotion_pieces = [
+            Piece::knight(White),
+            Piece::bishop(White),
+            Piece::rook(White),
+            Piece::queen(White),
+        ];
+        temp_moves = temp_moves
+            .into_iter()
+            .flat_map(|mov| {
+                promotion_pieces
+                    .iter()
+                    .map(move |promotion_piece| ChessMove {
+                        start: mov.start,
+                        dest: mov.dest,
+                        promotion: Some(*promotion_piece),
+                    })
+            })
+            .collect()
+    }
+
+    moves.append(&mut temp_moves);
 }
 
 fn black_pawn_moves(board_state: &BoardState, position: ChessCell, moves: &mut Vec<ChessMove>) {
+    let mut temp_moves: Vec<ChessMove> = vec![];
     let ChessCell(rank, file) = position;
     let left_cap = ChessCell(rank - 1, file - 1);
     let target = board_state.board.square(left_cap);
     if target.is_enemy_of(Black) {
-        moves.push((position, left_cap).into())
+        temp_moves.push((position, left_cap).into())
     }
 
     let right_cap = ChessCell(rank - 1, file + 1);
     let target = board_state.board.square(right_cap);
     if target.is_enemy_of(Black) {
-        moves.push((position, right_cap).into())
+        temp_moves.push((position, right_cap).into())
     }
 
     let one_forward = ChessCell(rank - 1, file);
     let target = board_state.board.square(one_forward);
     if target.is_empty() {
-        if rank == RANK_2 {
-            let promotion_pieces = [
-                Piece::knight(Black),
-                Piece::bishop(Black),
-                Piece::rook(Black),
-                Piece::queen(Black),
-            ];
+        temp_moves.push((position, one_forward).into());
 
-            for piece in promotion_pieces {
-                moves.push((position, one_forward, piece).into())
-            }
-        } else {
-            moves.push((position, one_forward).into());
-
-            if rank == RANK_7 {
-                let two_forward = ChessCell(rank - 2, file);
-                let target = board_state.board.square(two_forward);
-                if target.is_empty() {
-                    moves.push((position, two_forward).into());
-                }
+        if rank == RANK_7 {
+            let two_forward = ChessCell(rank - 2, file);
+            let target = board_state.board.square(two_forward);
+            if target.is_empty() {
+                temp_moves.push((position, two_forward).into());
             }
         }
     }
+
+    if rank == RANK_2 {
+        let promotion_pieces = [
+            Piece::knight(Black),
+            Piece::bishop(Black),
+            Piece::rook(Black),
+            Piece::queen(Black),
+        ];
+        temp_moves = temp_moves
+            .into_iter()
+            .flat_map(|mov| {
+                promotion_pieces
+                    .iter()
+                    .map(move |promotion_piece| ChessMove {
+                        start: mov.start,
+                        dest: mov.dest,
+                        promotion: Some(*promotion_piece),
+                    })
+            })
+            .collect()
+    }
+
+    moves.append(&mut temp_moves);
 }
+
 pub fn knight_moves(
     color: PieceColor,
     board_state: &BoardState,
@@ -379,6 +403,51 @@ mod tests {
             (A2, A1, Piece::bishop(PieceColor::Black)).into(),
             (A2, A1, Piece::rook(PieceColor::Black)).into(),
             (A2, A1, Piece::queen(PieceColor::Black)).into(),
+        ];
+
+        for mov in expected_moves {
+            assert!(legal_moves.contains(&mov))
+        }
+    }
+
+    #[test]
+    fn game_with_possible_promotion_by_push_and_capture_for_white_contains_correct_moves() {
+        let board_state =
+            BoardState::from_fen("r4rk1/1pp1P2p/p3bqpQ/4p3/2B5/8/PPP3PP/2KR3R w - - 0 1").unwrap();
+
+        let legal_moves = generate_moves(&board_state);
+
+        let expected_moves: Vec<ChessMove> = vec![
+            (E7, E8, Piece::knight(PieceColor::White)).into(),
+            (E7, E8, Piece::bishop(PieceColor::White)).into(),
+            (E7, E8, Piece::rook(PieceColor::White)).into(),
+            (E7, E8, Piece::queen(PieceColor::White)).into(),
+            (E7, F8, Piece::knight(PieceColor::White)).into(),
+            (E7, F8, Piece::bishop(PieceColor::White)).into(),
+            (E7, F8, Piece::rook(PieceColor::White)).into(),
+            (E7, F8, Piece::queen(PieceColor::White)).into(),
+        ];
+
+        for mov in expected_moves {
+            assert!(legal_moves.contains(&mov))
+        }
+    }
+
+    #[test]
+    fn game_with_possible_promotion_by_push_and_capture_for_black_contains_correct_moves() {
+        let board_state = BoardState::from_fen("8/8/1k6/8/8/8/3K2p1/5R2 b - - 0 1").unwrap();
+
+        let legal_moves = generate_moves(&board_state);
+
+        let expected_moves: Vec<ChessMove> = vec![
+            (G2, G1, Piece::knight(PieceColor::Black)).into(),
+            (G2, G1, Piece::bishop(PieceColor::Black)).into(),
+            (G2, G1, Piece::rook(PieceColor::Black)).into(),
+            (G2, G1, Piece::queen(PieceColor::Black)).into(),
+            (G2, F1, Piece::knight(PieceColor::Black)).into(),
+            (G2, F1, Piece::bishop(PieceColor::Black)).into(),
+            (G2, F1, Piece::rook(PieceColor::Black)).into(),
+            (G2, F1, Piece::queen(PieceColor::Black)).into(),
         ];
 
         for mov in expected_moves {
