@@ -43,6 +43,20 @@ impl PieceColor {
         }
     }
 
+    pub fn promotion_rank(self) -> usize {
+        match self {
+            White => RANK_7,
+            Black => RANK_2,
+        }
+    }
+
+    pub fn pawn_starting_rank(self) -> usize {
+        match self {
+            White => RANK_2,
+            Black => RANK_7,
+        }
+    }
+
     pub fn index(self) -> usize {
         match self {
             White => 0,
