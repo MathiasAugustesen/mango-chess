@@ -67,10 +67,7 @@ pub fn generate_pseudo_moves_for_piece(
 ) {
     let color = piece.color;
     match piece.kind {
-        Pawn => match color {
-            White => white_pawn_moves(board_state, position, pseudo_moves),
-            Black => black_pawn_moves(board_state, position, pseudo_moves),
-        },
+        Pawn => pawn_moves(color, board_state, position, pseudo_moves),
         Knight => knight_moves(color, board_state, position, pseudo_moves),
         Bishop => bishop_moves(color, board_state, position, pseudo_moves),
         Rook => rook_moves(color, board_state, position, pseudo_moves),
@@ -78,28 +75,35 @@ pub fn generate_pseudo_moves_for_piece(
         Queen => queen_moves(color, board_state, position, pseudo_moves),
     }
 }
-fn white_pawn_moves(board_state: &BoardState, position: ChessCell, moves: &mut Vec<ChessMove>) {
-    let mut temp_moves: Vec<ChessMove> = vec![];
 
+fn pawn_moves(
+    color: PieceColor,
+    board_state: &BoardState,
+    position: ChessCell,
+    moves: &mut Vec<ChessMove>,
+) {
+    let mut temp_moves: Vec<ChessMove> = vec![];
+    let push_direction = color.signum();
     let ChessCell(rank, file) = position;
-    let left_cap = ChessCell(rank + 1, file - 1);
+
+    let left_cap = ChessCell((rank as i32 + push_direction) as usize, file - 1);
     let target = board_state.board.square(left_cap);
-    if target.is_enemy_of(White) {
+    if target.is_enemy_of(color) {
         temp_moves.push((position, left_cap).into())
     }
 
-    let right_cap = ChessCell(rank + 1, file + 1);
+    let right_cap = ChessCell((rank as i32 + push_direction) as usize, file + 1);
     let target = board_state.board.square(right_cap);
-    if target.is_enemy_of(White) {
+    if target.is_enemy_of(color) {
         temp_moves.push((position, right_cap).into())
     }
 
-    let one_forward = ChessCell(rank + 1, file);
+    let one_forward = ChessCell((rank as i32 + push_direction) as usize, file);
     let target = board_state.board.square(one_forward);
     if target.is_empty() {
         temp_moves.push((position, one_forward).into());
-        if rank == RANK_2 {
-            let two_forward = ChessCell(rank + 2, file);
+        if rank == color.pawn_starting_rank() {
+            let two_forward = ChessCell((rank as i32 + push_direction) as usize, file);
             let target = board_state.board.square(two_forward);
             if target.is_empty() {
                 temp_moves.push((position, two_forward).into());
@@ -107,65 +111,12 @@ fn white_pawn_moves(board_state: &BoardState, position: ChessCell, moves: &mut V
         }
     }
 
-    if rank == RANK_7 {
+    if rank == color.promotion_rank() {
         let promotion_pieces = [
-            Piece::knight(White),
-            Piece::bishop(White),
-            Piece::rook(White),
-            Piece::queen(White),
-        ];
-        temp_moves = temp_moves
-            .into_iter()
-            .flat_map(|mov| {
-                promotion_pieces
-                    .iter()
-                    .map(move |promotion_piece| ChessMove {
-                        start: mov.start,
-                        dest: mov.dest,
-                        promotion: Some(*promotion_piece),
-                    })
-            })
-            .collect()
-    }
-
-    moves.append(&mut temp_moves);
-}
-
-fn black_pawn_moves(board_state: &BoardState, position: ChessCell, moves: &mut Vec<ChessMove>) {
-    let mut temp_moves: Vec<ChessMove> = vec![];
-    let ChessCell(rank, file) = position;
-    let left_cap = ChessCell(rank - 1, file - 1);
-    let target = board_state.board.square(left_cap);
-    if target.is_enemy_of(Black) {
-        temp_moves.push((position, left_cap).into())
-    }
-
-    let right_cap = ChessCell(rank - 1, file + 1);
-    let target = board_state.board.square(right_cap);
-    if target.is_enemy_of(Black) {
-        temp_moves.push((position, right_cap).into())
-    }
-
-    let one_forward = ChessCell(rank - 1, file);
-    let target = board_state.board.square(one_forward);
-    if target.is_empty() {
-        temp_moves.push((position, one_forward).into());
-
-        if rank == RANK_7 {
-            let two_forward = ChessCell(rank - 2, file);
-            let target = board_state.board.square(two_forward);
-            if target.is_empty() {
-                temp_moves.push((position, two_forward).into());
-            }
-        }
-    }
-
-    if rank == RANK_2 {
-        let promotion_pieces = [
-            Piece::knight(Black),
-            Piece::bishop(Black),
-            Piece::rook(Black),
-            Piece::queen(Black),
+            Piece::knight(color),
+            Piece::bishop(color),
+            Piece::rook(color),
+            Piece::queen(color),
         ];
         temp_moves = temp_moves
             .into_iter()
