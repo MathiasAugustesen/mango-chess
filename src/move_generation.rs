@@ -101,7 +101,7 @@ fn pawn_moves(
     if target.is_empty() {
         temp_moves.push((position, one_forward).into());
         if rank == color.pawn_starting_rank() {
-            let two_forward = ChessCell((rank as i32 + push_direction) as usize, file);
+            let two_forward = ChessCell((rank as i32 + push_direction * 2) as usize, file);
             let target = board_state.board.square(two_forward);
             if target.is_empty() {
                 temp_moves.push((position, two_forward).into());
@@ -263,7 +263,9 @@ pub fn generate_en_passant_moves(board_state: &BoardState) -> Vec<ChessMove> {
 }
 #[cfg(test)]
 mod tests {
-    use crate::{
+    use std::collections::HashSet;
+
+use crate::{
         board_elements::{ChessMove, Piece, PieceColor, PieceKind},
         board_state::BoardState,
     };
@@ -274,8 +276,22 @@ mod tests {
     #[test]
     fn generate_moves_from_starting_position() {
         let board_state = BoardState::new_game();
-        let legal_moves = generate_moves(&board_state);
-        assert_eq!(legal_moves.len(), 20);
+        let legal_moves: HashSet<ChessMove> = generate_moves(&board_state).into_iter().collect();
+
+        let expected_moves: HashSet<ChessMove> = vec![
+            (A2, A3).into(), (A2, A4).into(), 
+            (B2, B3).into(), (B2, B4).into(), 
+            (C2, C3).into(), (C2, C4).into(),
+            (D2, D3).into(), (D2, D4).into(),
+            (E2, E3).into(), (E2, E4).into(),
+            (F2, F3).into(), (F2, F4).into(),
+            (G2, G3).into(), (G2, G4).into(),
+            (H2, H3).into(), (H2, H4).into(),
+            (B1, A3).into(), (B1, C3).into(),
+            (G1, F3).into(), (G1, H3).into(),  
+
+        ].into_iter().collect();
+        assert_eq!(legal_moves, expected_moves);
     }
     #[test]
     fn generate_moves_from_bongcloud() {

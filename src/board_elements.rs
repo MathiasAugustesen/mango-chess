@@ -3,7 +3,7 @@ use std::str::FromStr;
 use crate::constants::*;
 use PieceColor::*;
 use PieceKind::*;
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PieceColor {
     White,
     Black,
@@ -64,7 +64,7 @@ impl PieceColor {
         }
     }
 }
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PieceKind {
     Pawn,
     Knight,
@@ -152,7 +152,7 @@ impl std::fmt::Display for Square {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Piece {
     pub color: PieceColor,
     pub kind: PieceKind,
@@ -346,7 +346,7 @@ impl Iterator for BitBoard {
 // ChessCell represents a valid algebraic square on the board
 // The format is row, col, or rank, file in chess terms.
 // b4 will therefore translate to ChessCell(3, 5)
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ChessCell(pub usize, pub usize);
 impl From<(usize, usize)> for ChessCell {
     fn from(value: (usize, usize)) -> Self {
@@ -415,7 +415,7 @@ impl std::fmt::Display for ChessCell {
     }
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy, Eq, Hash)]
 pub struct ChessMove {
     pub start: ChessCell,
     pub dest: ChessCell,
